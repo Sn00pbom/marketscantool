@@ -6,13 +6,14 @@ import numpy as np
 import sys
 import valuehunter as vh
 
-# namespace = vh.data.NameSpace.from_file('./namespace.txt')
-PATH = './dat/2019-11-03-watchlist.csv'
-# if len(sys.argv) is 2:
-#     PATH = sys.argv[1]
-# else:
-#     print('USAGE: python score_wl_macd_thresh_chain.py [PATH TO WATCHLIST]')
-#     exit()
+if vh.config.DEBUG:
+    PATH = './dat/2019-11-03-watchlist.csv'
+else:
+    if len(sys.argv) is 2:
+        PATH = sys.argv[1]
+    else:
+        print('USAGE: python score_wl_macd_thresh_chain.py [PATH TO WATCHLIST]')
+    exit()
 print('Starting...')
 namespace = vh.data.NameSpace.from_tos_wl(PATH)
 wl_data = vh.data.load_tos_data(PATH)
