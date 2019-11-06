@@ -6,6 +6,7 @@ from io import StringIO
 STD_LEN = 0
 
 def benchmark_length(period_type, period, frequency_type, frequency) -> int:
+    print('Getting benchmark length...')
     share = Share('ED')
     try:
         symbol_data = share.get_historical(

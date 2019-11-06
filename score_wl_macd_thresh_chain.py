@@ -13,7 +13,7 @@ else:
         PATH = sys.argv[1]
     else:
         print('USAGE: python score_wl_macd_thresh_chain.py [PATH TO WATCHLIST]')
-    exit()
+        exit()
 print('Starting...')
 namespace = vh.data.NameSpace.from_tos_wl(PATH)
 wl_data = vh.data.load_tos_data(PATH)
