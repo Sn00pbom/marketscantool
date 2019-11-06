@@ -1,5 +1,4 @@
 import os
-import datetime
 
 ALPHAVANTAGE_API_KEY = 'E1268XS0ZC9SPFPD'
 QUANDL_API_KEY = 'RxHHiqNxgdyLiKbvtrky'
