@@ -5,9 +5,10 @@ import datetime
 import numpy as np
 import sys
 import valuehunter as vh
+# vh.config.DEBUG = True
 
 if vh.config.DEBUG:
-    PATH = './dat/2019-11-03-watchlist.csv'
+    PATH = './dat/wl.csv'
 else:
     if len(sys.argv) is 2:
         PATH = sys.argv[1]
