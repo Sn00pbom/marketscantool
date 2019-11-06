@@ -1,0 +1,4 @@
+# ignore project folders and dat folder contents
+.*/
+dat/*
+__pycache__
