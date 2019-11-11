@@ -8,7 +8,7 @@ import valuehunter as vh
 # vh.config.DEBUG = True
 
 if vh.config.DEBUG:
-    PATH = './dat/wl.csv'
+    PATH = './dat/small_wl.csv'
 else:
     if len(sys.argv) is 2:
         PATH = sys.argv[1]
@@ -43,13 +43,17 @@ rubrick = {
         'weight': 65.0
     },
     'Chain Len': {
-        'f': lambda data_dict, ticker: vh.grade.histogram_reversal_chain(data_dict[ticker], l=3),
+        'f': lambda data_dict, ticker: vh.grade.histogram_reversal_chain(data_dict[ticker], l=2, rev_only=True),
         'perfect': 10.0,
         'weight': 35.0
     }
 }
 my_grader = vh.grade.Grader(rubrick)
 score_sheet = my_grader.grade(data_dict)
+my_grader.rubrick['Chain Len']['f'] = lambda data_dict, ticker: vh.grade.histogram_reversal_chain(data_dict[ticker], l=1, rev_only=False)
+tss = my_grader.grade(data_dict)
+score_sheet['Chain Len (No Reversal)'] = tss['Chain Len']
+score_sheet['Composite Score (No Reversal)'] = tss['Composite Score']
 for col in wl_data:
     score_sheet[col] = wl_data[col]
 
