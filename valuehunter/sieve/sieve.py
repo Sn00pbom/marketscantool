@@ -41,6 +41,3 @@ class Sieve(object):
 
     def sift(self, batch):
         return [element for element in batch if self(element)]
-
-    def sift_df_rows(self, df):
-        return [row for _, row in df.iterrows() if self(row)]

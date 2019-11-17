@@ -34,36 +34,37 @@ def load_tos_data(path, index='Symbol') -> pd.DataFrame:
     df.set_index(index, inplace=True)
     return df
 
-def get_historical_data(ticker, period_type, period, frequency_type, frequency) -> pd.DataFrame:
-        if STD_LEN is 0: benchmark_length(period_type, period, frequency_type, frequency)
-        share = Share(ticker)
-        try:
-            symbol_data = share.get_historical(
-                period_type, period,
-                frequency_type, frequency                
-            )
-            
-            df = pd.DataFrame(symbol_data)
-            assert not df.empty 
-            # TODO fix to compute expected number of rows
+def get_historical_data(ticker, period_type, period, frequency_type, frequency, standardize=True) -> pd.DataFrame:
+    if STD_LEN is 0: 
+        benchmark_length(period_type, period, frequency_type, frequency)
+
+    share = Share(ticker)
+    try:
+        symbol_data = share.get_historical(
+            period_type, period,
+            frequency_type, frequency                
+        )
+        
+        df = pd.DataFrame(symbol_data)
+        assert not df.empty 
+        # TODO fix to compute expected number of rows instead of using standard length
+        # standardize size
+        if standardize:
             assert df.shape[0] is STD_LEN
-            return df
-        except YahooFinanceError as e:
-            print(e.message, '-- Ticker:', ticker)
-            return None
-        except:
-            print('Mismatch -- Ticker:', ticker, '...skipping')
-            return None
+        # df = df.rename(columns={key:key.capitalize() for key in df}) # capitalize all column names for consistency
+        return df
+    except YahooFinanceError as e:
+        print(e.message, '@ Ticker', ticker)
+        return None
+    except:
+        print('Data Mismatch @ Ticker', ticker, '\t...skipping')
+        return None
 
 
 def get_namespace_historical(namespace, period_type, period, frequency_type, frequency) -> dict:
     data_dict = {}
-    for ticker in namespace.values:
+    for ticker in namespace:
         down_data = get_historical_data(ticker, period_type, period, frequency_type, frequency)
         if down_data is not None:
             data_dict[ticker] = down_data
     return data_dict
-
-# def get_namespace_historical(namespace, period_type, period, frequency_type, frequency) -> pd.DataFrame:
-#     return pd.Panel({ticker:get_historical_data(ticker, period_type, period, frequency_type, frequency) for ticker in namespace})
-#     return pd.DataFrame([get_historical_data(ticker, period_type, period, frequency_type, frequency) for ticker in namespace], columns=['ticker', ''])

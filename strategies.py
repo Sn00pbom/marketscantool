@@ -1,7 +1,2 @@
-from valuehunter.strategy import Strategy
-from valuehunter.strategy import decision
+import valuehunter as vh
 
-class MACDReversalChainLength(Strategy):
-    @staticmethod
-    def predict(ticker_df):
-        return decision.BUY_LONG

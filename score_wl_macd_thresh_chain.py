@@ -16,7 +16,7 @@ else:
         print('USAGE: python score_wl_macd_thresh_chain.py [PATH TO WATCHLIST]')
         exit()
 print('Starting...')
-namespace = vh.data.NameSpace.from_tos_wl(PATH)
+namespace = vh.data.namespace.from_tos_wl(PATH)
 wl_data = vh.data.load_tos_data(PATH)
 print('Ticker namespace loaded.')
 
@@ -36,21 +36,14 @@ for ticker in data_dict:
 
 print('Compiling DataFrame and saving to file...')
 
-rubrick = {
-    'Threshold': {
-        'f': lambda data_dict, ticker: vh.grade.score_thresh_macd(data_dict[ticker], THRESH_PERCENT),
-        'perfect': 1.0,
-        'weight': 65.0
-    },
-    'Chain Len': {
-        'f': lambda data_dict, ticker: vh.grade.histogram_reversal_chain(data_dict[ticker], l=2, rev_only=True),
-        'perfect': 10.0,
-        'weight': 35.0
-    }
-}
+rubrick = vh.grade.Rubrick()
+rubrick.add_column('Threshold', lambda data_dict, ticker: vh.grade.macd.score_thresh_macd(data_dict[ticker], THRESH_PERCENT), 1.0, 65.0)
+# rubrick.add_column('Chain Len', lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker], L=2, reversal=True), 1.0, 65.0)
+rubrick.add_column('Chain Len', lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker]['HISTOGRAM'].values, L=2, reversal=True), 10.0, 65.0)
+
 my_grader = vh.grade.Grader(rubrick)
 score_sheet = my_grader.grade(data_dict)
-my_grader.rubrick['Chain Len']['f'] = lambda data_dict, ticker: vh.grade.histogram_reversal_chain(data_dict[ticker], l=1, rev_only=False)
+my_grader.rubrick['Chain Len']['f'] = lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker]['HISTOGRAM'].values, L=2, reversal=False)
 tss = my_grader.grade(data_dict)
 score_sheet['Chain Len (No Reversal)'] = tss['Chain Len']
 score_sheet['Composite Score (No Reversal)'] = tss['Composite Score']
