@@ -1,3 +1,3 @@
-from valuehunter.grade.general import *
-from valuehunter.grade import macd
 from valuehunter.grade.grader import Rubrick, Grader
+import valuehunter.grade.general
+import valuehunter.grade.macd

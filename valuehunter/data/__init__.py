@@ -1,2 +1,6 @@
-from valuehunter.data.data_man import *
-from valuehunter.data import namespace
+import valuehunter.data.compat
+import valuehunter.data.local
+import valuehunter.data.sec
+import valuehunter.data.think_or_swim
+import valuehunter.data.various
+import valuehunter.data.yahoo

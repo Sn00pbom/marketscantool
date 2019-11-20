@@ -1,7 +1,6 @@
 from yahoo_finance_api2.share import Share
 from yahoo_finance_api2.exceptions import YahooFinanceError
-import pandas as pd
-from io import StringIO
+from pandas import DataFrame
 
 STD_LEN = 0
 
@@ -23,18 +22,7 @@ def benchmark_length(period_type, period, frequency_type, frequency) -> int:
         print('Benchmark Error')
         STD_LEN = 0
 
-def load_tos_data(path, index='Symbol') -> pd.DataFrame:
-    file = open(path, 'r')
-    data = file.read()
-    file.close()
-    data = data.split('\n')
-    data = data[3:len(data)-1]
-    s = '\n'.join(data)
-    df = pd.read_csv(StringIO(s))
-    df.set_index(index, inplace=True)
-    return df
-
-def get_historical_data(ticker, period_type, period, frequency_type, frequency, standardize=True) -> pd.DataFrame:
+def get_historical_data(ticker, period_type, period, frequency_type, frequency, standardize=True) -> DataFrame:
     if STD_LEN is 0: 
         benchmark_length(period_type, period, frequency_type, frequency)
 

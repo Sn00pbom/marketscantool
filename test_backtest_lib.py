@@ -54,11 +54,11 @@ class MacdChain(Strategy):
         return macd.rolling(period).apply(lambda vals: vh.grade.macd.histogram_chain(vals, L=2, reversal=True) * -1)
 
         
-namespace = vh.data.namespace.from_tos_wl('./dat/small_wl.csv')
+namespace = vh.data.namespace.from_tos_wl('./dat/wl.csv')
 everything = []
 for ticker in namespace:
 
-    df = vh.data.get_historical_data(ticker, share.PERIOD_TYPE_YEAR, 1, share.FREQUENCY_TYPE_DAY, 1, standardize=True) # load 'ROKU' data
+    df = vh.data.yahoo.get_historical_data(ticker, share.PERIOD_TYPE_YEAR, 1, share.FREQUENCY_TYPE_DAY, 1, standardize=True) # load 'ROKU' data
     if df is None or df.empty: continue
     df = df.drop(columns='timestamp') # drop timestamp
     # df.set_index('timestamp')
@@ -67,6 +67,7 @@ for ticker in namespace:
                 cash=10000, commission=.002)
                 
     results = bt.run()
+    bt.plot()
 
     everything.append(results['Win Rate [%]'])
 everything = [x for x in everything if str(x) != 'nan']
