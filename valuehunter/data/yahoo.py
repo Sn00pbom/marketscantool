@@ -13,7 +13,7 @@ def benchmark_length(period_type, period, frequency_type, frequency) -> int:
             period_type, period, frequency_type, frequency
         )
         # return pd.DataFrame(symbol_data).shape[0]
-        STD_LEN = pd.DataFrame(symbol_data).shape[0]
+        STD_LEN = DataFrame(symbol_data).shape[0]
         
     except YahooFinanceError as e:
         print(e.message, '-- Benchmark Error')
@@ -33,7 +33,7 @@ def get_historical_data(ticker, period_type, period, frequency_type, frequency, 
             frequency_type, frequency                
         )
         
-        df = pd.DataFrame(symbol_data)
+        df = DataFrame(symbol_data)
         assert not df.empty 
         # TODO fix to compute expected number of rows instead of using standard length
         # standardize size
