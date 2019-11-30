@@ -154,7 +154,7 @@ quantity = 500
 ri = [random.randrange(0,len(namespace)) for _ in range(quantity)]
 print(ri)
 namespace = [name for i, name in enumerate(namespace) if i in ri]
-namespace = ['ASYS']
+namespace = ['SNE']
 everything = []
 for ticker in namespace:
     print('computing',ticker)
