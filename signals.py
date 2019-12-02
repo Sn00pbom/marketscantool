@@ -67,3 +67,42 @@ class Earnings(bt.Indicator):
     def next(self):
         today_earnings = str(self.data.datetime.date()) in self.earnings
         self.lines.has_earnings[0] = today_earnings
+
+
+class MACDThresholdPercent(bt.Indicator):
+    lines = ('hi_thresh', 'lo_thresh', 'hi_exceed', 'lo_exceed')
+    params = (
+        ('period_me1', 12),
+        ('period_me2', 26),
+        ('period_signal', 9),
+        ('movav', bt.indicators.ExponentialMovingAverage),
+        ('percent_max', .8),
+        ('percent_trigger', .8),
+    )
+
+    def __init__(self):
+        macd = bt.indicators.MACD(
+            period_me1=self.p.period_me1,
+            period_me2=self.p.period_me2,
+            period_signal=self.p.period_signal,
+            movav=self.p.movav
+        )
+        self.macd = macd.macd
+        self.vals = []
+
+    def next(self):
+        self.vals.append(self.macd[0])
+
+        # compute hi signals
+        hi_thresh_i = max(self.vals) * self.p.percent_max
+        self.lines.hi_thresh[0] = hi_thresh_i
+        self.lines.hi_exceed[0] = self.macd[0]/hi_thresh_i > self.p.percent_trigger
+
+        # compute lo signals
+        lo_thresh_i = min(self.vals) * self.p.percent_max
+        self.lines.lo_thresh[0] = lo_thresh_i
+        self.lines.lo_exceed[0] = self.macd[0]/lo_thresh_i > self.p.percent_trigger
+
+
+
+

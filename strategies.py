@@ -99,15 +99,16 @@ class TestStrategy(bt.Strategy):
                  (self.params.maperiod, self.broker.getvalue()), doprint=True)
 
 
-class MACDThresholdHistoChainLen(bt.Strategy):
+class MACDComposite(bt.Strategy):
 
     params = (
         ('Lc', 15),
-        ('L1', False),
+        ('L1', 3),
         ('min_grade', 80.0),
         ('printlog', True),
         ('ticker', None),
         ('all_earnings_df', None),
+        ('trail_percent', 0.02),
     )
 
     def log(self, txt, dt=None, doprint=False):
@@ -123,8 +124,11 @@ class MACDThresholdHistoChainLen(bt.Strategy):
         self.sim = signals.SimPrice(self.datas[0])
         self.data_close = self.datas[0].close
         self.earnings = signals.Earnings(ticker=self.p.ticker, all_earnings_df=self.p.all_earnings_df)
+        self.thresh = signals.MACDThresholdPercent(percent_max=.8, percent_trigger=1.0)
 
         self.order = None  # track order
+        self.l1 = -1
+        self.l2 = -1
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -134,6 +138,7 @@ class MACDThresholdHistoChainLen(bt.Strategy):
         # Check if an order has been completed
         # Attention: broker could reject order if not enough cash
         if order.status in [order.Completed]:
+            self.l1 = -1  # reset enter position delay counter
             if order.isbuy():  # Buy
                 self.log('BUY EXECUTED')
 
@@ -149,29 +154,38 @@ class MACDThresholdHistoChainLen(bt.Strategy):
         return
 
     def next(self):
-        self.log('o {}, h {}, l {}, c {}, sim {}'.format(self.datas[0].open[0],
-                                                         self.datas[0].high[0],
-                                                         self.datas[0].low[0],
-                                                         self.datas[0].close[0],
-                                                         self.sim[0]))
+        # self.log('o {}, h {}, l {}, c {}, sim {}'.format(self.datas[0].open[0],
+        #                                                  self.datas[0].high[0],
+        #                                                  self.datas[0].low[0],
+        #                                                  self.datas[0].close[0],
+        #                                                  self.sim[0]))
         if self.order:
             return
 
-        # if self.l == 0:
-        #     self.order = self.buy()
-        #     self.l += 1
-        #
-        # elif self.l == 3:
-        #     self.l = 0
-        #     self.order = self.sell()
-        # else:
-        #     self.l += 1
+        is_earnings_nearby = False  # earnings announcement withing the next 2 days from 'today'
+        try:
+            if self.earnings[0]:
+                is_earnings_nearby = True
+            elif self.earnings[1]:
+                is_earnings_nearby = True
+            elif self.earnings[2]:
+                is_earnings_nearby = True
+
+        except IndexError as e:
+            pass
 
         if not self.position:
-            if self.data_close > self.macd_histo_chain:
-                self.order = self.buy()
+            if self.l1 == -1:
+                if not is_earnings_nearby and abs(self.macd_histo_chain[0]) > self.p.Lc and self.thresh.lo_exceed:
+                    self.l1 = 0
+                    self.log('PATTERN FOUND {}, {}'.format(is_earnings_nearby, self.macd_histo_chain[0]))
+            else:
+                self.l1 += 1
+
+            if self.l1 == self.p.L1:
+                self.order = self.buy(price=self.sim[0], exectype=bt.Order.StopTrail, trailpercent=self.p.trail_percent)
+
         else:
-            self.order = self.sell()
-
-
+            if is_earnings_nearby:
+                self.order = self.sell(price=self.sim[0])
 

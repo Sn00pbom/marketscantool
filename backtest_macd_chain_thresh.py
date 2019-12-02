@@ -21,13 +21,13 @@ if __name__ == '__main__':
 
     # init Cerebro
     cerebro = bt.Cerebro()  # create Cerebro object
-    cerebro.addstrategy(strategies.MACDThresholdHistoChainLen,
-                        Lc=10, L1=3, min_grade=80.0, printlog=True, ticker=ticker,
+    cerebro.addstrategy(strategies.MACDComposite,
+                        Lc=10, L1=0, min_grade=80.0, printlog=True, ticker=ticker,
                         all_earnings_df=vh.data.local.get_all_earnings())
 
     # create DataFeed and add to cerebro
     data_feed = bt.feeds.YahooFinanceCSVData(
-        dataname='./dat/yahoo_ROKU_5y1d.csv',
+        dataname='./dat/yahoo_AAPL_5y1d.csv',
         # Do not pass values before this date
         # fromdate=datetime.datetime(2016, 1, 1),
         fromdate=from_date,
