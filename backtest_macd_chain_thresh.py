@@ -21,9 +21,9 @@ if __name__ == '__main__':
 
     # init Cerebro
     cerebro = bt.Cerebro()  # create Cerebro object
-    cerebro.addstrategy(strategies.MACDThresholdHistoChainLen)
-                        #chain_L=2, L1=3, period_me1=12, period_me2=26, period_signal=9)  # add strategy to cerebro
-
+    cerebro.addstrategy(strategies.MACDThresholdHistoChainLen,
+                        Lc=10, L1=3, min_grade=80.0, printlog=True, ticker=ticker,
+                        all_earnings_df=vh.data.local.get_all_earnings())
 
     # create DataFeed and add to cerebro
     data_feed = bt.feeds.YahooFinanceCSVData(

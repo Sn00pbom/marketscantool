@@ -38,7 +38,6 @@ class MACDHistoChain(bt.Indicator):
         )
         self.histo = macd.histo
 
-
     def next(self):
         d = self.histo.get(size=50).tolist()
         if len(d) == 0:
@@ -47,27 +46,24 @@ class MACDHistoChain(bt.Indicator):
             chain = vh.grade.macd.histogram_chain(d, self.p.L, self.p.rev)
             self.lines.chain_len[0] = chain
 
+
 class Earnings(bt.Indicator):
     lines = ('has_earnings',)
     params = (
         ('ticker', None),
-        # ('earnings_df', None),
+        ('all_earnings_df', None),
     )
 
     def __init__(self):
         if self.p.ticker is None:
-            raise ValueError('Missing ticker name. param "ticker"')
+            raise ValueError('Missing ticker name.')
 
-        # if self.p.earnings_df is None:
-        #     raise ValueError('Missing earnings DataFrame. param "earnings_df"')
+        if self.p.all_earnings_df is None:
+            raise ValueError('Missing earnings DataFrame.')
 
-        # df = self.p.earnings_df
-        # df = vh.data.compat.set_datetime_index(df)
-        self.earnings = vh.data.local.get_ticker_earnings(self.p.ticker)
+        self.earnings = vh.data.local.get_ticker_earnings(self.p.ticker, self.p.all_earnings_df)
         self.earnings = self.earnings['date'].tolist()
-        print(self.earnings)
 
     def next(self):
         today_earnings = str(self.data.datetime.date()) in self.earnings
         self.lines.has_earnings[0] = today_earnings
-

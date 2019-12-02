@@ -106,6 +106,8 @@ class MACDThresholdHistoChainLen(bt.Strategy):
         ('L1', False),
         ('min_grade', 80.0),
         ('printlog', True),
+        ('ticker', None),
+        ('all_earnings_df', None),
     )
 
     def log(self, txt, dt=None, doprint=False):
@@ -120,10 +122,9 @@ class MACDThresholdHistoChainLen(bt.Strategy):
         self.macd_histo_chain = signals.MACDHistoChain(self.datas[0])
         self.sim = signals.SimPrice(self.datas[0])
         self.data_close = self.datas[0].close
-        self.earnings = signals.Earnings(ticker='ROKU')  # TODO make not fixed, change to var
+        self.earnings = signals.Earnings(ticker=self.p.ticker, all_earnings_df=self.p.all_earnings_df)
 
         self.order = None  # track order
-        self.l = 0
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:

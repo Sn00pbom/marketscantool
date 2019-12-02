@@ -22,7 +22,7 @@ def get_historical_daily(ticker) -> DataFrame:
     return df
 
 
-def get_ticker_earnings(ticker:str, all_earnings_df: DataFrame = None) -> DataFrame:
+def get_ticker_earnings(ticker: str, all_earnings_df: DataFrame = None) -> DataFrame:
     if all_earnings_df is None:
         all_earnings_df = get_all_earnings()
 
