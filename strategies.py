@@ -108,7 +108,7 @@ class MACDComposite(bt.Strategy):
         ('printlog', True),
         ('ticker', None),
         ('all_earnings_df', None),
-        ('trail_percent', 0.02),
+        ('trail_percent', 0.001),
     )
 
     def log(self, txt, dt=None, doprint=False):
@@ -121,12 +121,14 @@ class MACDComposite(bt.Strategy):
         self.price_data = self.datas[0]
         # self.mid = (((price_data.high + price_data.low)/2.) + ((price_data.open + price_data.close)/2.))/2.
         self.macd_histo_chain = signals.MACDHistoChain(self.datas[0])
+        self.macd_histo = bt.indicators.MACDHisto(self.datas[0])
         self.sim = signals.SimPrice(self.datas[0])
         self.data_close = self.datas[0].close
         self.earnings = signals.Earnings(ticker=self.p.ticker, all_earnings_df=self.p.all_earnings_df)
-        self.thresh = signals.MACDThresholdPercent(percent_max=.8, percent_trigger=1.0)
+        self.thresh = signals.MACDThresholdPercent(percent_max=.8, percent_trigger=0.8)  # TODO change to param from outside
 
         self.order = None  # track order
+        self.direction = None
         self.l1 = -1
         self.l2 = -1
 
@@ -163,6 +165,7 @@ class MACDComposite(bt.Strategy):
             return
 
         is_earnings_nearby = False  # earnings announcement withing the next 2 days from 'today'
+
         try:
             if self.earnings[0]:
                 is_earnings_nearby = True
@@ -176,16 +179,26 @@ class MACDComposite(bt.Strategy):
 
         if not self.position:
             if self.l1 == -1:
-                if not is_earnings_nearby and abs(self.macd_histo_chain[0]) > self.p.Lc and self.thresh.lo_exceed:
-                    self.l1 = 0
-                    self.log('PATTERN FOUND {}, {}'.format(is_earnings_nearby, self.macd_histo_chain[0]))
+                if not is_earnings_nearby and abs(self.macd_histo_chain[0]) > self.p.Lc:
+                    if self.macd_histo_chain[0] < 0 and self.thresh.lo_exceed:
+                        self.direction = 'bull'
+                        self.l1 = 0
+                    elif self.macd_histo_chain[0] > 0 and self.thresh.hi_exceed:
+                        self.direction = 'bear'
+                        self.l1 = 0
+                    # self.log('PATTERN FOUND {}, {}'.format(is_earnings_nearby, self.macd_histo_chain[0]))
             else:
                 self.l1 += 1
 
             if self.l1 == self.p.L1:
-                self.order = self.buy(price=self.sim[0], exectype=bt.Order.StopTrail, trailpercent=self.p.trail_percent)
+                if self.direction == 'bull':
+                    self.order = self.buy(price=self.sim[0], exectype=bt.Order.StopTrail, trailamount=0.01)
+                elif self.direction == 'bear':
+                    self.order = self.sell(price=self.sim[0], exectype=bt.Order.StopTrail, trailamount=0.01)
 
         else:
             if is_earnings_nearby:
-                self.order = self.sell(price=self.sim[0])
-
+                if self.direction == 'bull':
+                    self.order = self.sell(price=self.sim[0])
+                elif self.direction == 'bear':
+                    self.order = self.buy(price=self.sim[0])
