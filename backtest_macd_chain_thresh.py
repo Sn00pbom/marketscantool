@@ -121,35 +121,35 @@ def parse_args(pargs=None):
 
     parser.add_argument('--simweights', '-sw', nargs=4, type=float, default=[1., 1., 1., 1.],
                         metavar=('WO', 'WH', 'WL', 'WC'),
-                        help='Define weights to be used for weighted avg price. Default all 1.0.')
+                        help='Define weights to be used for weighted avg price (default: all 1.0)')
 
     parser.add_argument('--delay', '-d', type=int, default=3,
-                        help='Delay between recognized pattern and position entry times. Default 3.')
+                        help='Delay between recognized pattern and position entry times (default: 3)')
 
     parser.add_argument('--macd', '-m', nargs=3, type=int, default=[12, 26, 9],
                         metavar=('PERIOD_SHORT', 'PERIOD_LONG', 'PERIOD_SIGNAL'),
-                        help='Define periods to be used in MACD. Default 12, 26, 9.')
+                        help='Define periods to be used in MACD (default: 12 26 9)')
 
     parser.add_argument('--anychain', '-ac', action='store_true',
-                        help='Count MACD histo chain regardless of reversal state.')
+                        help='Count MACD histo chain regardless of reversal state')
 
     parser.add_argument('--chainlenlookback', '-cllb', type=int, default=2,
-                        help='MACD Histo chain lookback length L. Default 2.')
+                        help='MACD Histo chain lookback length L (default: 2)')
 
     parser.add_argument('--triggerchainlen', '-tcl', type=int, default=10,
-                        help='MACD Histo chain length that will trigger condition. Default 10.')
+                        help='MACD Histo chain length that will trigger condition (default: 10)')
 
     parser.add_argument('--maxthreshpercent', '-mtp', type=float, default=0.8,
                         metavar='PERCENT',
-                        help='MACD max value percent threshold. Default 0.8')
+                        help='MACD max value percent threshold (default: 0.8)')
 
     parser.add_argument('--triggerthreshpercent', '-ttp', type=float, default=0.8,
                         metavar='PERCENT',
-                        help='MACD value percent that will trigger condition. Default 0.8.')
+                        help='MACD value percent that will trigger condition (default 0.8)')
 
     parser.add_argument('--stoptrailpercent', '-s', type=float, default=0.05,
                         metavar='PERCENT',
-                        help='Trailing Stop delta percent. Default 0.05.')
+                        help='Trailing Stop delta percent (default: 0.05)')
 
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Enable logging small details during back-testing.')
