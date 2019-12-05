@@ -1,36 +1,51 @@
 import backtrader as bt
 import valuehunter as vh
-import pandas as pd
-import datetime
 import strategies
 from datetime import datetime, timedelta
-from io import StringIO
+import argparse
 
 
-if __name__ == '__main__':
+def run():
+    # get args
+    args = parse_args()
 
-    # get earnings calendar from and to dates
-    summary_df = vh.data.local.get_dataset_summary()
-    all_earnings_df = vh.data.local.get_all_earnings()
-    # all_prices_df = vh.data.local.get_all_prices()
-    # all_prices_df = pd.read_csv('./dat/all_prices_mini.csv', parse_dates=['date'])  # parse dates in column 1 'date'
+    def log(msg, force=False):
+        if args.verbose or force:
+            print('{}\t{}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), msg))
 
+    log('Started...', force=True)
+
+    # get summary and earnings data
+    try:
+        log('Loading summary data...')
+        summary_df = vh.data.local.get_dataset_summary()
+        log('Loading all earnings data...')
+        all_earnings_df = vh.data.local.get_all_earnings()
+    except FileNotFoundError as e:
+        print(e)
+        exit()
 
     # namespace = summary_df.index
-    namespace = ['ROKU', 'AAPL', 'GHSI', 'FLIC', 'IMUX', 'AMD', 'AMZN']
+    namespace = args.symbol
+    # buffer = StringIO()
+    log('Using namespace ' + str(namespace))
 
     for ticker in namespace:
-        print(ticker)
 
-        # get ticker dataframe
+        log('Ticker @ {}'.format(ticker), force=True)
+
         try:
+            log('Loading...')
             ticker_prices = vh.data.local.get_price_history(ticker)
+            log('Loaded!')
         except FileNotFoundError:
-            print('fnf')
+            log('FileNotFoundError @ {}\tskipping...'.format(ticker))
             continue
 
-        # if ticker_prices.shape[0] < 50:
-        #     continue
+        if ticker not in summary_df.index:
+            log('Not in earnings dataset -> skipping...', force=True)
+            continue
+
         ticker_prices = ticker_prices.sort_values(by='date')
         ticker_prices = ticker_prices.set_index(['date'])
 
@@ -43,14 +58,25 @@ if __name__ == '__main__':
         to_s = to_s if isinstance(to_s, str) else summary_df.at[ticker, 'stock_to_date']
         from_date = datetime.strptime(from_s, form) - delta
         to_date = datetime.strptime(to_s, form) + delta
-        print('Earnings Data From:', from_date)
-        print('Earnings Data To:', to_date)
+        log('Backtesting {} from {} to {}'.format(ticker, from_date, to_date))
 
         # init Cerebro
         cerebro = bt.Cerebro()  # create Cerebro object
+        # TODO change all_earnings_df to pass only ticker df
         cerebro.addstrategy(strategies.MACDComposite,
-                            Lc=10, L1=2, min_grade=80.0, printlog=True, ticker=ticker,
-                            all_earnings_df=all_earnings_df)
+                            all_earnings_df=all_earnings_df,
+                            delay=args.delay,
+                            verbose=args.verbose,
+                            ticker=ticker,
+                            sl=args.stoptrailpercent,
+                            # rr_ratio=
+                            max_percent=args.maxthreshpercent,
+                            trigger_percent=args.triggerthreshpercent,
+                            macd_periods=args.macd,
+                            chainlenlookback=args.chainlenlookback,
+                            reversal_only=not args.anychain,  # anychain means not reversal only
+                            trigger_chainlen=args.triggerchainlen,
+                            sim_weights=args.simweights)
 
         # send dataframe to DataFeed
         data_feed = bt.feeds.PandasData(
@@ -70,12 +96,75 @@ if __name__ == '__main__':
         cerebro.broker.set_cash(10000.0)  # set initial equity to $10k
         cerebro.broker.setcommission(commission=0.001)  # set broker commission to .1%
 
-        print('Beginning Value: {}\nBeginning Price: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()))
+        # add csv writer to Cerebro
+        # cerebro.addwriter(bt.WriterFile, csv=True, out=buffer)
+
+        log('\n\tBeginning Value: {}\n\tBeginning Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()),
+            force=True)
         try:
             cerebro.run(max_cpus=4)  # loop over loaded data
         except IndexError:
             print('IndexError @ {} - continuing'.format(ticker))
             continue
-        print('Ending Value: {}\nEnding Price: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()))
-        cerebro.plot()
+        log('\n\tEnding Value: {}\n\tEnding Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()),
+            force=True)
+        if args.plot:
+            cerebro.plot()
+
+
+
+def parse_args(pargs=None):
+    parser = argparse.ArgumentParser(
+        # formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description='Backtest a single ticker or multiple tickers with MACDComposite Strategy'
+    )
+
+    parser.add_argument('--simweights', '-sw', nargs=4, type=float, default=[1., 1., 1., 1.],
+                        metavar=('WO', 'WH', 'WL', 'WC'),
+                        help='Define weights to be used for weighted avg price. Default all 1.0.')
+
+    parser.add_argument('--delay', '-d', type=int, default=3,
+                        help='Delay between recognized pattern and position entry times. Default 3.')
+
+    parser.add_argument('--macd', '-m', nargs=3, type=int, default=[12, 26, 9],
+                        metavar=('PERIOD_SHORT', 'PERIOD_LONG', 'PERIOD_SIGNAL'),
+                        help='Define periods to be used in MACD. Default 12, 26, 9.')
+
+    parser.add_argument('--anychain', '-ac', action='store_true',
+                        help='Count MACD histo chain regardless of reversal state.')
+
+    parser.add_argument('--chainlenlookback', '-cllb', type=int, default=2,
+                        help='MACD Histo chain lookback length L. Default 2.')
+
+    parser.add_argument('--triggerchainlen', '-tcl', type=int, default=10,
+                        help='MACD Histo chain length that will trigger condition. Default 10.')
+
+    parser.add_argument('--maxthreshpercent', '-mtp', type=float, default=0.8,
+                        metavar='PERCENT',
+                        help='MACD max value percent threshold. Default 0.8')
+
+    parser.add_argument('--triggerthreshpercent', '-ttp', type=float, default=0.8,
+                        metavar='PERCENT',
+                        help='MACD value percent that will trigger condition. Default 0.8.')
+
+    parser.add_argument('--stoptrailpercent', '-s', type=float, default=0.05,
+                        metavar='PERCENT',
+                        help='Trailing Stop delta percent. Default 0.05.')
+
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Enable logging small details during back-testing.')
+
+    parser.add_argument('--plot', '-p', action='store_true',
+                        help='Enable plotting at the end of each ticker back-test.')
+
+    parser.add_argument('symbol', type=str, nargs='+',
+                        help='Stock symbol(s) to back-test.')
+
+    # TODO add data path argument
+
+    return parser.parse_args(pargs)
+
+
+if __name__ == '__main__':
+    run()
 

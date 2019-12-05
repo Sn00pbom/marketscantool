@@ -18,7 +18,7 @@ def df_from_tab_delimited(path) -> DataFrame:
 
 
 def get_price_history(ticker: str) -> DataFrame:
-    hist_path = 'C:/dataset/amex-nyse-nasdaq-stock-histories/fh_20190420/full_history/{}.csv'.format(ticker)
+    hist_path = '{}{}.csv'.format(config.SYMBOL_HISTORY_PATH, ticker)
     return pd.read_csv(hist_path, parse_dates=['date'])
 
 

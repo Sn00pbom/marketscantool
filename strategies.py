@@ -2,137 +2,56 @@ import valuehunter as vh
 import backtrader as bt
 import signals
 
-class TestStrategy(bt.Strategy):
-    params = (
-        ('maperiod', 15),
-        ('printlog', False),
-    )
-
-    def log(self, txt, dt=None, doprint=False):
-        ''' Logging function fot this strategy'''
-        if self.params.printlog or doprint:
-            dt = dt or self.datas[0].datetime.date(0)
-            print('%s, %s' % (dt.isoformat(), txt))
-
-    def __init__(self):
-        # Keep a reference to the "close" line in the data[0] dataseries
-        self.dataclose = self.datas[0].close
-
-        # To keep track of pending orders and buy price/commission
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-
-        # Add a MovingAverageSimple indicator
-        self.sma = bt.indicators.SimpleMovingAverage(
-            self.datas[0], period=self.params.maperiod)
-
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
-            return
-
-        # Check if an order has been completed
-        # Attention: broker could reject order if not enough cash
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(
-                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                    (order.executed.price,
-                     order.executed.value,
-                     order.executed.comm))
-
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:  # Sell
-                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price,
-                          order.executed.value,
-                          order.executed.comm))
-
-            self.bar_executed = len(self)
-
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-
-        # Write down: no pending order
-        self.order = None
-
-    def notify_trade(self, trade):
-        if not trade.isclosed:
-            return
-
-        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
-                 (trade.pnl, trade.pnlcomm))
-
-    def next(self):
-        # Simply log the closing price of the series from the reference
-        self.log('Close, %.2f' % self.dataclose[0])
-
-        # Check if an order is pending ... if yes, we cannot send a 2nd one
-        if self.order:
-            return
-
-        # Check if we are in the market
-        if not self.position:
-
-            # Not yet ... we MIGHT BUY if ...
-            if self.dataclose[0] > self.sma[0]:
-
-                # BUY, BUY, BUY!!! (with all possible default parameters)
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
-                self.order = self.buy()
-
-        else:
-
-            if self.dataclose[0] < self.sma[0]:
-                # SELL, SELL, SELL!!! (with all possible default parameters)
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
-                self.order = self.sell()
-
-    def stop(self):
-        self.log('(MA Period %2d) Ending Value %.2f' %
-                 (self.params.maperiod, self.broker.getvalue()), doprint=True)
-
 
 class MACDComposite(bt.Strategy):
 
     params = (
-        ('Lc', 15),
-        ('L1', 3),
-        ('min_grade', 80.0),
-        ('printlog', True),
-        ('ticker', None),
         ('all_earnings_df', None),
-        ('trail_percent', 0.001),
+        ('delay', 3),
+        ('verbose', True),
+        ('ticker', None),
+        ('sl', 0.05),
+        ('rr_ratio', 3),
+        ('max_percent', 0.8),
+        ('trigger_percent', 0.8),
+        ('macd_periods', [12, 26, 9]),
+        ('chainlenlookback', 2),
+        ('reversal_only', True),
+        ('trigger_chainlen', 10),
+        ('sim_weights', [1., 1., 1., 1.]),
     )
 
-    def log(self, txt, dt=None, doprint=False):
-        ''' Logging function fot this strategy'''
-        if self.params.printlog or doprint:
+    def log(self, txt, dt=None, force=False):
+        """Logging function fot this strategy"""
+        if self.params.verbose or force:
             dt = dt or self.datas[0].datetime.date(0)
             print('%s, %s' % (dt.isoformat(), txt))
 
     def __init__(self):
         self.price_data = self.datas[0]
         # self.mid = (((price_data.high + price_data.low)/2.) + ((price_data.open + price_data.close)/2.))/2.
-        self.macd_histo_chain = signals.MACDHistoChain(self.datas[0])
-        self.macd_histo = bt.indicators.MACDHisto(self.datas[0])
-        self.sim = signals.SimPrice(self.datas[0])
+        self.macd_histo = bt.indicators.MACDHisto(self.datas[0],
+                                                  period_me1=self.p.macd_periods[0],
+                                                  period_me2=self.p.macd_periods[1],
+                                                  period_signal=self.p.macd_periods[2])
+        self.macd_histo_chain = signals.MACDHistoChain(self.datas[0],
+                                                       macd_periods=self.p.macd_periods,
+                                                       L=self.p.chainlenlookback,
+                                                       reversal_only=self.p.reversal_only)
+        self.sim = signals.SimPrice(self.datas[0], weights=self.p.sim_weights)
         self.data_close = self.datas[0].close
         self.earnings = signals.Earnings(ticker=self.p.ticker, all_earnings_df=self.p.all_earnings_df)
-        self.thresh = signals.MACDThresholdPercent(percent_max=.8, percent_trigger=0.8)  # TODO change to param from outside
+        self.thresh = signals.MACDThresholdPercent(macd_periods=self.p.macd_periods,
+                                                   max_percent=self.p.max_percent,
+                                                   trigger_percent=self.p.trigger_percent)
 
-        self.order = None  # track order
-        self.direction = None
+        self.sl_order, self.tp_order = None, None  # track trade profit and stop loss orders
+        self.decision = None
         self.l1 = -1
         self.l2 = -1
 
     def notify_order(self, order):
+        # self.log('{} {} {}'.format(order.exectype, order.status, order.tradeid))
         if order.status in [order.Submitted, order.Accepted]:
             # Buy/Sell order submitted/accepted to/by broker - Nothing to do
             return
@@ -140,6 +59,7 @@ class MACDComposite(bt.Strategy):
         # Check if an order has been completed
         # Attention: broker could reject order if not enough cash
         if order.status in [order.Completed]:
+            self.sl_order = None  # stop tracking stop loss if present
             self.l1 = -1  # reset enter position delay counter
             if order.isbuy():  # Buy
                 self.log('BUY EXECUTED')
@@ -147,22 +67,27 @@ class MACDComposite(bt.Strategy):
             else:  # Sell
                 self.log('SELL EXECUTED')
 
+            # if order.exectype == bt.Order.StopTrail:
+            #     print('completed:\n{}'.format(order))
+
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.sl_order = None  # stop tracking stop loss if present
+            self.log('Canceled stop loss')
             self.log('Order Canceled/Margin/Rejected')
 
-        self.order = None  # track no pending order
+        self.tp_order = None  # track no pending order
 
     def notify_trade(self, trade):
-        return
+        # clear order vars if closed so not in position state
+        if trade.isclosed:
+            # self.log('Trade closed with value {}'.format(trade.value))  # TODO fix
+            pass
+            # if trade is not self.sl_order:
+            #     self.cancel(self.sl_order)
+            # self.sl_order = None
+            # self.tp_order = None
 
     def next(self):
-        # self.log('o {}, h {}, l {}, c {}, sim {}'.format(self.datas[0].open[0],
-        #                                                  self.datas[0].high[0],
-        #                                                  self.datas[0].low[0],
-        #                                                  self.datas[0].close[0],
-        #                                                  self.sim[0]))
-        if self.order:
-            return
 
         is_earnings_nearby = False  # earnings announcement withing the next 2 days from 'today'
 
@@ -173,32 +98,46 @@ class MACDComposite(bt.Strategy):
                 is_earnings_nearby = True
             elif self.earnings[2]:
                 is_earnings_nearby = True
-
-        except IndexError as e:
+        except IndexError:
             pass
 
         if not self.position:
             if self.l1 == -1:
-                if not is_earnings_nearby and abs(self.macd_histo_chain[0]) > self.p.Lc:
+                if not is_earnings_nearby and abs(self.macd_histo_chain[0]) > self.p.trigger_chainlen:
                     if self.macd_histo_chain[0] < 0 and self.thresh.lo_exceed:
-                        self.direction = 'bull'
+                        self.log('Long Pattern Found')
+                        self.decision = 'long'
                         self.l1 = 0
                     elif self.macd_histo_chain[0] > 0 and self.thresh.hi_exceed:
-                        self.direction = 'bear'
+                        self.log('Short Pattern Found')
+                        self.decision = 'short'
                         self.l1 = 0
-                    # self.log('PATTERN FOUND {}, {}'.format(is_earnings_nearby, self.macd_histo_chain[0]))
             else:
                 self.l1 += 1
 
-            if self.l1 == self.p.L1:
-                if self.direction == 'bull':
-                    self.order = self.buy(price=self.sim[0], exectype=bt.Order.StopTrail, trailamount=0.01)
-                elif self.direction == 'bear':
-                    self.order = self.sell(price=self.sim[0], exectype=bt.Order.StopTrail, trailamount=0.01)
+            if self.l1 == self.p.delay:
+                if self.decision == 'long':
+                    self.tp_order = self.buy(price=self.sim[0])
+                elif self.decision == 'short':
+                    self.tp_order = self.sell(price=self.sim[0])
 
         else:
+
             if is_earnings_nearby:
-                if self.direction == 'bull':
-                    self.order = self.sell(price=self.sim[0])
-                elif self.direction == 'bear':
-                    self.order = self.buy(price=self.sim[0])
+                self.log('EARNINGS - DUMPING')
+                if self.sl_order:
+                    self.broker.cancel(self.sl_order)
+
+                if self.decision == 'long':
+                    self.tp_order = self.sell(price=self.sim[0])
+                elif self.decision == 'short':
+                    self.tp_order = self.buy(price=self.sim[0])
+
+            else:
+                if not self.sl_order:  # no stop loss order
+                    if self.decision == 'long':
+                        self.sl_order = self.sell(exectype=bt.Order.StopTrail, trailpercent=self.p.sl)
+                    elif self.decision == 'short':
+                        self.sl_order = self.buy(exectype=bt.Order.StopTrail, trailpercent=self.p.sl)
+
+
