@@ -19,6 +19,7 @@ class MACDComposite(bt.Strategy):
         ('reversal_only', True),
         ('trigger_chainlen', 10),
         ('sim_weights', [1., 1., 1., 1.]),
+        ('output_date_str_fmt', '%Y-%m-%d'),
     )
 
     def log(self, txt, dt=None, force=False):
@@ -50,6 +51,10 @@ class MACDComposite(bt.Strategy):
         self.l1 = -1
         self.l2 = -1
 
+        self.recent_trade = None
+        self.trades = []
+
+
     def notify_order(self, order):
         # self.log('{} {} {}'.format(order.exectype, order.status, order.tradeid))
         if order.status in [order.Submitted, order.Accepted]:
@@ -62,30 +67,29 @@ class MACDComposite(bt.Strategy):
             self.sl_order = None  # stop tracking stop loss if present
             self.l1 = -1  # reset enter position delay counter
             if order.isbuy():  # Buy
-                self.log('BUY EXECUTED')
+                self.log('BUY EXECUTED @ {}'.format(order.created.price))
 
             else:  # Sell
-                self.log('SELL EXECUTED')
+                self.log('SELL EXECUTED @ {}'.format(order.created.price))
 
             # if order.exectype == bt.Order.StopTrail:
             #     print('completed:\n{}'.format(order))
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.sl_order = None  # stop tracking stop loss if present
-            self.log('Canceled stop loss')
+            if order is self.sl_order:
+                self.sl_order = None  # stop tracking stop loss if present
+                self.log('Canceled stop loss')
             self.log('Order Canceled/Margin/Rejected')
 
         self.tp_order = None  # track no pending order
 
     def notify_trade(self, trade):
-        # clear order vars if closed so not in position state
+        self.recent_trade = trade
+
         if trade.isclosed:
-            # self.log('Trade closed with value {}'.format(trade.value))  # TODO fix
-            pass
-            # if trade is not self.sl_order:
-            #     self.cancel(self.sl_order)
-            # self.sl_order = None
-            # self.tp_order = None
+            self.trades.append({'open@': trade.open_datetime().strftime(self.p.output_date_str_fmt),
+                                 'close@': trade.close_datetime().strftime(self.p.output_date_str_fmt),
+                                 'pnl': trade.pnl})
 
     def next(self):
 
@@ -140,4 +144,15 @@ class MACDComposite(bt.Strategy):
                     elif self.decision == 'short':
                         self.sl_order = self.buy(exectype=bt.Order.StopTrail, trailpercent=self.p.sl)
 
+    def stop(self):
+        if self.position:
+            trade = self.recent_trade
+            self.trades.append({'open@': trade.open_datetime().strftime(self.p.output_date_str_fmt),
+                                'close@': 'IN POSITION',
+                                'pnl': trade.value})
 
+    def get_wl_ratio(self):
+        if len(self.trades) is not 0:
+            return sum(1 if trade['pnl'] >= 0 else 0 for trade in self.trades) / len(self.trades)
+        else:
+            return 'NO TRADES'

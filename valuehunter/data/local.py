@@ -64,3 +64,17 @@ def dict_from_csv(path: str) -> dict:
                 data[columns[i]].append(line[i])
 
         return data
+
+
+def multi_df_to_excel(path: str, dfs: list, names: list = None, index=False):
+    if names and len(dfs) is not len(names):
+        raise ValueError('Lists must be same size')
+
+    with pd.ExcelWriter(path, engine='openpyxl') as writer:
+        # Write each dataframe to a different worksheet.
+        for i, df in enumerate(dfs):
+            df.to_excel(writer, sheet_name='data'+str(i) if not names else names[i], index=index)
+
+        # Close the Pandas Excel writer and output the Excel file.
+        writer.save()
+

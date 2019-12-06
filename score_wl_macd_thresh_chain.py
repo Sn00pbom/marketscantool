@@ -47,6 +47,7 @@ score_sheet['Composite Score(No Reversal)'] = tss['Composite Score']
 for col in wl_data:
     score_sheet[col] = wl_data[col]
 
+# TODO move format string to config
 path = vh.config.SCAN_FOLDER_PATH + 'SCAN-' + datetime.datetime.now().strftime('%Y-%m-%d_%H_%M') + '.csv'
 score_sheet.to_csv(path)
 print('Saved to', path)

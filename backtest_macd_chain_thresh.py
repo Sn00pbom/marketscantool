@@ -9,9 +9,9 @@ def run():
     # get args
     args = parse_args()
 
-    def log(msg, force=False):
+    def log(*msg, force=False):
         if args.verbose or force:
-            print('{}\t{}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), msg))
+            print('{}\t'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')), *msg)
 
     log('Started...', force=True)
 
@@ -30,9 +30,27 @@ def run():
     # buffer = StringIO()
     log('Using namespace ' + str(namespace))
 
+    summary_report = {
+        'symbol': [],
+        'cash': [],
+        'value': [],
+        'n trades': [],
+        'wl ratio': [],
+        'pnl': [],
+    }
+
+    trades_report = {
+        'symbol': [],
+        'open@': [],
+        'close@': [],
+        'trade #': [],
+        'pnl trade': [],
+        'pnl net': [],
+    }
+
     for ticker in namespace:
 
-        log('Ticker @ {}'.format(ticker), force=True)
+        log('Ticker @', ticker, force=True)
 
         try:
             log('Loading...')
@@ -91,26 +109,57 @@ def run():
         )
         cerebro.adddata(data_feed)
 
-        cerebro.addsizer(bt.sizers.FixedSize, stake=10)  # set fixed sizer
+        cerebro.addsizer(bt.sizers.FixedSize, stake=args.stake)  # set fixed sizer
 
-        cerebro.broker.set_cash(10000.0)  # set initial equity to $10k
+        cerebro.broker.set_cash(args.equity)  # set initial equity
         cerebro.broker.setcommission(commission=0.001)  # set broker commission to .1%
 
         # add csv writer to Cerebro
         # cerebro.addwriter(bt.WriterFile, csv=True, out=buffer)
 
-        log('\n\tBeginning Value: {}\n\tBeginning Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()),
-            force=True)
+        log('\n\tBeginning Value: {}\n\tBeginning Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()))
         try:
-            cerebro.run(max_cpus=4)  # loop over loaded data
+            results = cerebro.run(max_cpus=4)  # loop over loaded data
         except IndexError:
             print('IndexError @ {} - continuing'.format(ticker))
             continue
-        log('\n\tEnding Value: {}\n\tEnding Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()),
-            force=True)
+        # results = cerebro.run(max_cpus=4)
+        log('\n\tEnding Value: {}\n\tEnding Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()))
+
+        # get results
+        strat = results[0]
+
+        # populate trade history report
+        pnl_net = 0.0
+        for i, trade in enumerate(strat.trades):
+            pnl_trade = trade['pnl']
+            pnl_net += pnl_trade
+            trades_report['symbol'].append(ticker)
+            trades_report['open@'].append(trade['open@'])
+            trades_report['close@'].append(trade['close@'])
+            trades_report['trade #'].append(i)
+            trades_report['pnl trade'].append(pnl_trade)
+            trades_report['pnl net'].append(pnl_net)
+
+        # populate summary reports
+        summary_report['symbol'].append(ticker)
+        summary_report['cash'].append(cerebro.broker.getcash())
+        summary_report['value'].append(cerebro.broker.getvalue())
+        summary_report['n trades'].append(len(strat.trades))
+        summary_report['wl ratio'].append(strat.get_wl_ratio())
+        summary_report['pnl'].append(pnl_net)
+
         if args.plot:
             cerebro.plot()
 
+    if not args.nosave:  # if saving is enabled
+        from pandas import DataFrame
+        report_summary_df = DataFrame(summary_report)
+        report_trades_df = DataFrame(trades_report)
+        # dfs = vh.data.local.outputs_to_dataframes(out_dict)
+        out_path = '{}BACKTEST-{}.xlsx'.format(vh.config.SCAN_FOLDER_PATH, datetime.now().strftime('%Y-%m-%d_%H_%M'))
+        vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df], ['Trade Summary', 'Trade History'])
+        log('Saved to {}'.format(out_path))
 
 
 def parse_args(pargs=None):
@@ -147,18 +196,28 @@ def parse_args(pargs=None):
                         metavar='PERCENT',
                         help='MACD value percent that will trigger condition (default 0.8)')
 
-    parser.add_argument('--stoptrailpercent', '-s', type=float, default=0.05,
+    parser.add_argument('--stoptrailpercent', '-stp', type=float, default=0.05,
                         metavar='PERCENT',
                         help='Trailing Stop delta percent (default: 0.05)')
 
+    parser.add_argument('--stake', '-s', type=int, default=10,
+                        metavar='NSHARES',
+                        help='Number of shares per operation (default: 10')
+
+    parser.add_argument('--equity', '-e', type=float, default=10000.0,
+                        help='Initial equity to trade with (default: 10000.0)')
+
     parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Enable logging small details during back-testing.')
+                        help='Enable logging small details during back-testing')
 
     parser.add_argument('--plot', '-p', action='store_true',
-                        help='Enable plotting at the end of each ticker back-test.')
+                        help='Enable plotting at the end of each ticker back-test')
+
+    parser.add_argument('--nosave', '-ns', action='store_true',
+                        help='Disable save output to .xlsx file')
 
     parser.add_argument('symbol', type=str, nargs='+',
-                        help='Stock symbol(s) to back-test.')
+                        help='Stock symbol(s) to back-test')
 
     # TODO add data path argument
 
