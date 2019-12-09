@@ -87,6 +87,7 @@ def run():
                             verbose=args.verbose,
                             ticker=ticker,
                             sl=args.stoptrailpercent,
+                            limit_percent=args.limitpercent,
                             # rr_ratio=
                             max_percent=args.maxthreshpercent,
                             trigger_percent=args.triggerthreshpercent,
@@ -200,6 +201,10 @@ def parse_args(pargs=None):
                         metavar='PERCENT',
                         help='Trailing Stop delta percent (default: 0.05)')
 
+    parser.add_argument('--limitpercent', '-lip', type=float, default=0.05,
+                        metavar='PERCENT',
+                        help='Limit percent of price (default: 0.05)')
+
     parser.add_argument('--stake', '-s', type=int, default=10,
                         metavar='NSHARES',
                         help='Number of shares per operation (default: 10')
@@ -210,6 +215,7 @@ def parse_args(pargs=None):
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Enable logging small details during back-testing')
 
+    # TODO add arg check. Plot all if no names given, plot only names given if names given
     parser.add_argument('--plot', '-p', action='store_true',
                         help='Enable plotting at the end of each ticker back-test')
 

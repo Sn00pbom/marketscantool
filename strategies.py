@@ -1,4 +1,3 @@
-import valuehunter as vh
 import backtrader as bt
 import signals
 
@@ -11,6 +10,7 @@ class MACDComposite(bt.Strategy):
         ('verbose', True),
         ('ticker', None),
         ('sl', 0.05),
+        ('limit_percent', 0.05),
         ('rr_ratio', 3),
         ('max_percent', 0.8),
         ('trigger_percent', 0.8),
@@ -46,14 +46,17 @@ class MACDComposite(bt.Strategy):
                                                    max_percent=self.p.max_percent,
                                                    trigger_percent=self.p.trigger_percent)
 
-        self.sl_order, self.tp_order = None, None  # track trade profit and stop loss orders
+        # Track orders
+        self.sl_order = None  # stop loss order
+        self.lim_order = None  # limit order
+        self.tp_order = None  # take profit order
+
         self.decision = None
         self.l1 = -1
         self.l2 = -1
 
         self.recent_trade = None
         self.trades = []
-
 
     def notify_order(self, order):
         # self.log('{} {} {}'.format(order.exectype, order.status, order.tradeid))
@@ -64,7 +67,6 @@ class MACDComposite(bt.Strategy):
         # Check if an order has been completed
         # Attention: broker could reject order if not enough cash
         if order.status in [order.Completed]:
-            self.sl_order = None  # stop tracking stop loss if present
             self.l1 = -1  # reset enter position delay counter
             if order.isbuy():  # Buy
                 self.log('BUY EXECUTED @ {}'.format(order.created.price))
@@ -72,14 +74,11 @@ class MACDComposite(bt.Strategy):
             else:  # Sell
                 self.log('SELL EXECUTED @ {}'.format(order.created.price))
 
-            # if order.exectype == bt.Order.StopTrail:
-            #     print('completed:\n{}'.format(order))
-
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            if order is self.sl_order:
-                self.sl_order = None  # stop tracking stop loss if present
-                self.log('Canceled stop loss')
-            self.log('Order Canceled/Margin/Rejected')
+            if order.exectype == bt.Order.Limit:
+                self.log('Limit Order Cancelled')
+            if order.exectype == bt.Order.StopTrail:
+                self.log('StopTrail Order Cancelled')
 
         self.tp_order = None  # track no pending order
 
@@ -88,8 +87,9 @@ class MACDComposite(bt.Strategy):
 
         if trade.isclosed:
             self.trades.append({'open@': trade.open_datetime().strftime(self.p.output_date_str_fmt),
-                                 'close@': trade.close_datetime().strftime(self.p.output_date_str_fmt),
-                                 'pnl': trade.pnl})
+                                'close@': trade.close_datetime().strftime(self.p.output_date_str_fmt),
+                                'pnl': trade.pnl})
+            self.log('CLOSED POSITION')
 
     def next(self):
 
@@ -121,31 +121,29 @@ class MACDComposite(bt.Strategy):
 
             if self.l1 == self.p.delay:
                 if self.decision == 'long':
-                    self.tp_order = self.buy(price=self.sim[0])
+                    # self.tp_order = self.buy(price=self.sim[0])
+                    self.tp_order = self.buy(price=self.sim[0], transmit=False)
+                    self.sl_order = self.sell(exectype=bt.Order.StopTrail, trailpercent=self.p.sl,
+                                              transmit=False, parent=self.tp_order)
+                    self.lim_order = self.sell(price=self.sim[0] * (1.0 + self.p.limit_percent),
+                                               exectype=bt.Order.Limit,
+                                               transmit=True, parent=self.tp_order)
+
                 elif self.decision == 'short':
-                    self.tp_order = self.sell(price=self.sim[0])
+                    self.tp_order = self.sell(price=self.sim[0], transmit=False)
+                    self.sl_order = self.buy(exectype=bt.Order.StopTrail, trailpercent=self.p.sl,
+                                             transmit=False, parent=self.tp_order)
+                    self.lim_order = self.buy(price=self.sim[0] * (1.0 - self.p.limit_percent),
+                                              exectype=bt.Order.Limit,
+                                              transmit=True, parent=self.tp_order)
 
         else:
-
             if is_earnings_nearby:
                 self.log('EARNINGS - DUMPING')
-                if self.sl_order:
-                    self.broker.cancel(self.sl_order)
-
-                if self.decision == 'long':
-                    self.tp_order = self.sell(price=self.sim[0])
-                elif self.decision == 'short':
-                    self.tp_order = self.buy(price=self.sim[0])
-
-            else:
-                if not self.sl_order:  # no stop loss order
-                    if self.decision == 'long':
-                        self.sl_order = self.sell(exectype=bt.Order.StopTrail, trailpercent=self.p.sl)
-                    elif self.decision == 'short':
-                        self.sl_order = self.buy(exectype=bt.Order.StopTrail, trailpercent=self.p.sl)
+                self._force_close()
 
     def stop(self):
-        if self.position:
+        if self.position and self.recent_trade:
             trade = self.recent_trade
             self.trades.append({'open@': trade.open_datetime().strftime(self.p.output_date_str_fmt),
                                 'close@': 'IN POSITION',
@@ -156,3 +154,19 @@ class MACDComposite(bt.Strategy):
             return sum(1 if trade['pnl'] >= 0 else 0 for trade in self.trades) / len(self.trades)
         else:
             return 'NO TRADES'
+
+    def _force_close(self):
+        # Cancel and untrack Limit
+        self.broker.cancel(self.lim_order)
+        self.lim_order = None
+
+        # Cancel and untrack StopTrail
+        self.broker.cancel(self.sl_order)
+        self.sl_order = None
+
+        # Close position
+        if self.decision == 'long':
+            self.tp_order = self.sell(price=self.sim[0])
+        elif self.decision == 'short':
+            self.tp_order = self.buy(price=self.sim[0])
+
