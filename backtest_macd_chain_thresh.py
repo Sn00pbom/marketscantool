@@ -25,8 +25,8 @@ def run():
         print(e)
         exit()
 
-    # namespace = summary_df.index
-    namespace = args.symbol
+    # symbols to upper
+    namespace = [str(symbol).upper() for symbol in args.symbol]
     # buffer = StringIO()
     log('Using namespace ' + str(namespace))
 
@@ -151,16 +151,17 @@ def run():
         summary_report['pnl'].append(pnl_net)
 
         if args.plot:
+            log('Showing Plot for {}'.format(ticker), force=True)
             cerebro.plot()
 
-    if not args.nosave:  # if saving is enabled
+    if args.save:  # if saving is enabled
         from pandas import DataFrame
         report_summary_df = DataFrame(summary_report)
         report_trades_df = DataFrame(trades_report)
         # dfs = vh.data.local.outputs_to_dataframes(out_dict)
         out_path = '{}BACKTEST-{}.xlsx'.format(vh.config.SCAN_FOLDER_PATH, datetime.now().strftime('%Y-%m-%d_%H_%M'))
         vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df], ['Trade Summary', 'Trade History'])
-        log('Saved to {}'.format(out_path))
+        log('Saved to {}'.format(out_path), force=True)
 
 
 def parse_args(pargs=None):
@@ -205,9 +206,9 @@ def parse_args(pargs=None):
                         metavar='PERCENT',
                         help='Limit percent of price (default: 0.05)')
 
-    parser.add_argument('--stake', '-s', type=int, default=10,
+    parser.add_argument('--stake', '-st', type=int, default=10,
                         metavar='NSHARES',
-                        help='Number of shares per operation (default: 10')
+                        help='Number of shares per operation (default: 10)')
 
     parser.add_argument('--equity', '-e', type=float, default=10000.0,
                         help='Initial equity to trade with (default: 10000.0)')
@@ -219,8 +220,8 @@ def parse_args(pargs=None):
     parser.add_argument('--plot', '-p', action='store_true',
                         help='Enable plotting at the end of each ticker back-test')
 
-    parser.add_argument('--nosave', '-ns', action='store_true',
-                        help='Disable save output to .xlsx file')
+    parser.add_argument('--save', '-s', action='store_true',
+                        help='Save output to .xlsx file')
 
     parser.add_argument('symbol', type=str, nargs='+',
                         help='Stock symbol(s) to back-test')
