@@ -86,12 +86,12 @@ class MACDThresholdPercent(bt.Indicator):
         # compute hi signals
         hi_thresh_i = max(self.vals) * self.p.max_percent
         self.lines.hi_thresh[0] = hi_thresh_i
-        self.lines.hi_exceed[0] = self.macd[0]/hi_thresh_i > self.p.trigger_percent
+        self.lines.hi_exceed[0] = self.macd[0]/hi_thresh_i if hi_thresh_i else 0 > self.p.trigger_percent
 
         # compute lo signals
         lo_thresh_i = min(self.vals) * self.p.max_percent
         self.lines.lo_thresh[0] = lo_thresh_i
-        self.lines.lo_exceed[0] = self.macd[0]/lo_thresh_i > self.p.trigger_percent
+        self.lines.lo_exceed[0] = self.macd[0]/lo_thresh_i if lo_thresh_i else 0 > self.p.trigger_percent
 
 
 

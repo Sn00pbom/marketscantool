@@ -45,7 +45,7 @@ def get_dataset_summary() -> DataFrame:
     return df
 
 
-def namespace_from_summary(summary_df:DataFrame) -> list:
+def namespace_from_summary(summary_df: DataFrame) -> list:
     return list(summary_df['symbol'].values)
 
 

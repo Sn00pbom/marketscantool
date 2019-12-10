@@ -6,28 +6,70 @@ import argparse
 
 
 def run():
-    # get args
+
+    # Get args
     args = parse_args()
 
     def log(*msg, force=False):
         if args.verbose or force:
             print('{}\t'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')), *msg)
 
-    log('Started...', force=True)
+    log('Initializing...', force=True)
 
-    # get summary and earnings data
+    # Load earnings dataset
     try:
         log('Loading summary data...')
         summary_df = vh.data.local.get_dataset_summary()
-        log('Loading all earnings data...')
+        log('Loading earnings data...')
         all_earnings_df = vh.data.local.get_all_earnings()
-    except FileNotFoundError as e:
-        print(e)
+    except FileNotFoundError:
+        print('No Earnings Dataset. Quitting...')
         exit()
 
-    # symbols to upper
-    namespace = [str(symbol).upper() for symbol in args.symbol]
-    # buffer = StringIO()
+    # Load namespace target from args
+    ns_args = []
+    if args.namespace:
+        optype, ns_path = args.namespace
+        print(optype, ns_path)
+        if optype == 'tos':
+            ns_args = vh.data.think_or_swim.watchlist_to_namespace(ns_path)
+        elif optype == 'nl':
+            ns_args = vh.data.local.namespace_from_symbol_list(ns_path)
+        # elif optype == 'all':
+        #     ns_args = vh.data.local.namespace_from_summary(summary_df)
+        else:
+            print('Unrecognized type. Quitting...')
+            exit()
+    else:
+        if len(args.symbol) == 0:
+            print('Must have symbols or namespace')
+            exit()
+        else:
+            ns_args = [str(symbol).upper() for symbol in args.symbol]  # all entered values to upper
+
+    # Symbols in earnings dates and summary data set
+    log('Checking symbols in earnings dataset...')
+    ns_earnset = []
+    for symbol in ns_args:
+        if symbol in summary_df.index:
+            ns_earnset.append(symbol)
+        else:
+            log('Symbol {} not found in Earnings Dataset'.format(symbol), force=True)
+
+    # Symbols in price data set / load datas
+    log('Checking symbols in price dataset...')
+    prices_dict = {}
+    for symbol in ns_earnset:
+        try:
+            symbol_prices = vh.data.local.get_price_history(symbol)
+            symbol_prices = symbol_prices.sort_values(by='date')
+            symbol_prices = symbol_prices.set_index(['date'])
+            prices_dict[symbol] = symbol_prices
+        except FileNotFoundError:
+            log('FileNotFoundError @ {}\tskipping...'.format(symbol))
+
+    namespace = list(prices_dict.keys())
+
     log('Using namespace ' + str(namespace))
 
     summary_report = {
@@ -48,24 +90,12 @@ def run():
         'pnl net': [],
     }
 
-    for ticker in namespace:
+    num_symbols = len(namespace)
+    log('Running Backtests...\n', force=True)
 
-        log('Ticker @', ticker, force=True)
-
-        try:
-            log('Loading...')
-            ticker_prices = vh.data.local.get_price_history(ticker)
-            log('Loaded!')
-        except FileNotFoundError:
-            log('FileNotFoundError @ {}\tskipping...'.format(ticker))
-            continue
-
-        if ticker not in summary_df.index:
-            log('Not in earnings dataset -> skipping...', force=True)
-            continue
-
-        ticker_prices = ticker_prices.sort_values(by='date')
-        ticker_prices = ticker_prices.set_index(['date'])
+    for i, ticker in enumerate(namespace):
+        print('=' * 50)
+        log('Backtesting ticker @ {} - {}/{}'.format(ticker, i+1, num_symbols), force=True)
 
         # get earnings dates
         form = '%Y-%m-%d'
@@ -99,7 +129,7 @@ def run():
 
         # send dataframe to DataFeed
         data_feed = bt.feeds.PandasData(
-            dataname=ticker_prices,
+            dataname=prices_dict[ticker],
             fromdate=from_date,
             todate=to_date,
             open='open',
@@ -154,6 +184,9 @@ def run():
             log('Showing Plot for {}'.format(ticker), force=True)
             cerebro.plot()
 
+    print('=' * 50)
+    print('+' * 50)
+    log('All backtesting finished.', force=True)
     if args.save:  # if saving is enabled
         from pandas import DataFrame
         report_summary_df = DataFrame(summary_report)
@@ -162,6 +195,8 @@ def run():
         out_path = '{}BACKTEST-{}.xlsx'.format(vh.config.SCAN_FOLDER_PATH, datetime.now().strftime('%Y-%m-%d_%H_%M'))
         vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df], ['Trade Summary', 'Trade History'])
         log('Saved to {}'.format(out_path), force=True)
+
+    print('+' * 50)
 
 
 def parse_args(pargs=None):
@@ -223,7 +258,12 @@ def parse_args(pargs=None):
     parser.add_argument('--save', '-s', action='store_true',
                         help='Save output to .xlsx file')
 
-    parser.add_argument('symbol', type=str, nargs='+',
+    parser.add_argument('--namespace', '-ns', type=str, nargs=2, default=None,
+                        metavar=('TYPE', 'PATH'),
+                        help='Load a namespace from a file of specified type. Types include: '
+                             'tos (Think or Swim Watchlist CSV), nl (New line seperated values), all (All in dataset')
+
+    parser.add_argument('symbol', type=str, nargs='*',
                         help='Stock symbol(s) to back-test')
 
     # TODO add data path argument
