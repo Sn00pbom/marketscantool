@@ -5,7 +5,7 @@ import signals
 class MACDComposite(bt.Strategy):
 
     params = (
-        ('all_earnings_df', None),
+        ('earnings_df', None),
         ('delay', 3),
         ('verbose', True),
         ('ticker', None),
@@ -41,7 +41,7 @@ class MACDComposite(bt.Strategy):
                                                        reversal_only=self.p.reversal_only)
         self.sim = signals.SimPrice(self.datas[0], weights=self.p.sim_weights)
         self.data_close = self.datas[0].close
-        self.earnings = signals.Earnings(ticker=self.p.ticker, all_earnings_df=self.p.all_earnings_df)
+        self.earnings = signals.Earnings(ticker=self.p.ticker, earnings_df=self.p.earnings_df)
         self.thresh = signals.MACDThresholdPercent(macd_periods=self.p.macd_periods,
                                                    max_percent=self.p.max_percent,
                                                    trigger_percent=self.p.trigger_percent)

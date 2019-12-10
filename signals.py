@@ -44,17 +44,17 @@ class Earnings(bt.Indicator):
     lines = ('has_earnings',)
     params = (
         ('ticker', None),
-        ('all_earnings_df', None),
+        ('earnings_df', None),
     )
 
     def __init__(self):
         if self.p.ticker is None:
             raise ValueError('Missing ticker name.')
 
-        if self.p.all_earnings_df is None:
+        if self.p.earnings_df is None:
             raise ValueError('Missing earnings DataFrame.')
 
-        self.earnings = vh.data.local.get_ticker_earnings(self.p.ticker, self.p.all_earnings_df)
+        self.earnings = self.p.earnings_df
         self.earnings = self.earnings['date'].tolist()
 
     def next(self):

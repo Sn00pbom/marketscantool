@@ -17,6 +17,7 @@ def run():
     log('Initializing...', force=True)
 
     # Load earnings dataset
+    log('Loading earnings dataset...', force=True)
     try:
         log('Loading summary data...')
         summary_df = vh.data.local.get_dataset_summary()
@@ -42,22 +43,22 @@ def run():
             exit()
     else:
         if len(args.symbol) == 0:
-            print('Must have symbols or namespace')
+            print('Must have symbols or namespace\npython backtest_macd_thresh_chain.py --help')
             exit()
         else:
             ns_args = [str(symbol).upper() for symbol in args.symbol]  # all entered values to upper
 
     # Symbols in earnings dates and summary data set
-    log('Checking symbols in earnings dataset...')
+    log('Checking symbols in earnings dataset...', force=True)
     ns_earnset = []
     for symbol in ns_args:
         if symbol in summary_df.index:
             ns_earnset.append(symbol)
         else:
-            log('Symbol {} not found in Earnings Dataset'.format(symbol), force=True)
+            log('Symbol {} not found in Earnings Dataset'.format(symbol))
 
     # Symbols in price data set / load datas
-    log('Checking symbols in price dataset...')
+    log('Checking and cleaning symbols in price dataset...', force=True)
     prices_dict = {}
     for symbol in ns_earnset:
         try:
@@ -74,12 +75,11 @@ def run():
             if dirtiness < args.dirtlimit:
                 prices_dict[symbol] = symbol_prices
             else:
-                log('Price data for {0} too dirty @ {1:.2f}%.\tskipping...'.format(symbol, dirtiness * 100), force=True)
+                log('Price data for {0} too dirty @ {1:.2f}%.\tskipping...'.format(symbol, dirtiness * 100))
 
         except FileNotFoundError:
             log('FileNotFoundError @ {}\t\tskipping...'.format(symbol))
 
-    exit()
     namespace = list(prices_dict.keys())
 
     log('Using namespace ' + str(namespace))
@@ -103,7 +103,7 @@ def run():
     }
 
     num_symbols = len(namespace)
-    log('Running Backtests...\n', force=True)
+    log('\nRunning Backtests...\n', force=True)
 
     for i, ticker in enumerate(namespace):
         print('=' * 50)
@@ -120,11 +120,13 @@ def run():
         to_date = datetime.strptime(to_s, form) + delta
         log('Backtesting {} from {} to {}'.format(ticker, from_date, to_date))
 
+        # get ticker earnings
+        earnings_df = vh.data.local.get_ticker_earnings(ticker, all_earnings_df)
+
         # init Cerebro
         cerebro = bt.Cerebro()  # create Cerebro object
-        # TODO change all_earnings_df to pass only ticker df
         cerebro.addstrategy(strategies.MACDComposite,
-                            all_earnings_df=all_earnings_df,
+                            earnings_df=earnings_df,
                             delay=args.delay,
                             verbose=args.verbose,
                             ticker=ticker,
@@ -254,7 +256,7 @@ def parse_args(pargs=None):
 
     parser.add_argument('--limitpercent', '-lip', type=float, default=0.03,
                         metavar='PERCENT',
-                        help='Limit percent of price (default: 0.03)')
+                        help='Percent of price to use for Limit (default: 0.03)')
 
     parser.add_argument('--stake', '-st', type=int, default=10,
                         metavar='NSHARES',
@@ -280,8 +282,8 @@ def parse_args(pargs=None):
 
     parser.add_argument('--dirtlimit', '-dl', type=int, default=0.005,
                         metavar='LIMIT',
-                        help='Set tolerable percent of dataset that contain same values for OHLC and still'
-                             'considered clean (default: 0.005)')
+                        help='Set tolerable percent of dataset that can contain "dirty" values for OHLC and still'
+                             'be considered clean (default: 0.005)')
 
     parser.add_argument('symbol', type=str, nargs='*',
                         help='Stock symbol(s) to back-test')
