@@ -189,11 +189,14 @@ def run():
     log('All backtesting finished.', force=True)
     if args.save:  # if saving is enabled
         from pandas import DataFrame
+        args_df = DataFrame({'Name': list(vars(args).keys()), 'Value': list(vars(args).values())})
         report_summary_df = DataFrame(summary_report)
         report_trades_df = DataFrame(trades_report)
         # dfs = vh.data.local.outputs_to_dataframes(out_dict)
         out_path = '{}BACKTEST-{}.xlsx'.format(vh.config.SCAN_FOLDER_PATH, datetime.now().strftime('%Y-%m-%d_%H_%M'))
-        vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df], ['Trade Summary', 'Trade History'])
+        vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df, args_df], ['Trade Summary',
+                                                                                                   'Trade History',
+                                                                                                   'Arguments'])
         log('Saved to {}'.format(out_path), force=True)
 
     print('+' * 50)
