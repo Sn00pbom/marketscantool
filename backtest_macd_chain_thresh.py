@@ -30,7 +30,7 @@ def run():
     ns_args = []
     if args.namespace:
         optype, ns_path = args.namespace
-        print(optype, ns_path)
+        log('Namespace file specified: ignoring symbols args', force=True)
         if optype == 'tos':
             ns_args = vh.data.think_or_swim.watchlist_to_namespace(ns_path)
         elif optype == 'nl':
@@ -64,10 +64,22 @@ def run():
             symbol_prices = vh.data.local.get_price_history(symbol)
             symbol_prices = symbol_prices.sort_values(by='date')
             symbol_prices = symbol_prices.set_index(['date'])
-            prices_dict[symbol] = symbol_prices
-        except FileNotFoundError:
-            log('FileNotFoundError @ {}\tskipping...'.format(symbol))
+            # Check dirtiness
+            bad = 0
+            for index, row in symbol_prices.iterrows():
+                if row['open'] == row['high'] == row['low'] == row['close']:
+                    bad += 1
 
+            dirtiness = bad / symbol_prices.shape[0] if symbol_prices.shape[0] else 1.0
+            if dirtiness < args.dirtlimit:
+                prices_dict[symbol] = symbol_prices
+            else:
+                log('Price data for {0} too dirty @ {1:.2f}%.\tskipping...'.format(symbol, dirtiness * 100), force=True)
+
+        except FileNotFoundError:
+            log('FileNotFoundError @ {}\t\tskipping...'.format(symbol))
+
+    exit()
     namespace = list(prices_dict.keys())
 
     log('Using namespace ' + str(namespace))
@@ -228,9 +240,9 @@ def parse_args(pargs=None):
     parser.add_argument('--triggerchainlen', '-tcl', type=int, default=10,
                         help='MACD Histo chain length that will trigger condition (default: 10)')
 
-    parser.add_argument('--maxthreshpercent', '-mtp', type=float, default=0.8,
+    parser.add_argument('--maxthreshpercent', '-mtp', type=float, default=0.5,
                         metavar='PERCENT',
-                        help='MACD max value percent threshold (default: 0.8)')
+                        help='MACD max value percent threshold (default: 0.5)')
 
     parser.add_argument('--triggerthreshpercent', '-ttp', type=float, default=0.8,
                         metavar='PERCENT',
@@ -240,9 +252,9 @@ def parse_args(pargs=None):
                         metavar='PERCENT',
                         help='Trailing Stop delta percent (default: 0.05)')
 
-    parser.add_argument('--limitpercent', '-lip', type=float, default=0.05,
+    parser.add_argument('--limitpercent', '-lip', type=float, default=0.03,
                         metavar='PERCENT',
-                        help='Limit percent of price (default: 0.05)')
+                        help='Limit percent of price (default: 0.03)')
 
     parser.add_argument('--stake', '-st', type=int, default=10,
                         metavar='NSHARES',
@@ -265,6 +277,11 @@ def parse_args(pargs=None):
                         metavar=('TYPE', 'PATH'),
                         help='Load a namespace from a file of specified type. Types include: '
                              'tos (Think or Swim Watchlist CSV), nl (New line seperated values), all (All in dataset')
+
+    parser.add_argument('--dirtlimit', '-dl', type=int, default=0.005,
+                        metavar='LIMIT',
+                        help='Set tolerable percent of dataset that contain same values for OHLC and still'
+                             'considered clean (default: 0.005)')
 
     parser.add_argument('symbol', type=str, nargs='*',
                         help='Stock symbol(s) to back-test')
