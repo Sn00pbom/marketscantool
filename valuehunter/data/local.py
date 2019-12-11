@@ -39,8 +39,7 @@ def get_all_prices() -> DataFrame:
 
 def get_dataset_summary() -> DataFrame:
     """Returns dataset summary with from and to dates indexed by 'symbol'. All column names are lower-case"""
-    path = "C:/dataset/us-historical-stock-prices-with-earnings-data/dataset_summary.csv"
-    df = pd.read_csv(path)
+    df = pd.read_csv(config.SUMMARY_PATH)
     df = df.set_index('symbol')
     return df
 
