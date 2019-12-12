@@ -19,9 +19,9 @@ def run():
     # Load earnings dataset
     log('Loading earnings dataset...', force=True)
     try:
-        log('Loading summary data...')
+        log('Loading summary data...', force=True)
         summary_df = vh.data.local.get_dataset_summary()
-        log('Loading earnings data...')
+        log('Loading earnings data...', force=True)
         all_earnings_df = vh.data.local.get_all_earnings()
     except FileNotFoundError:
         print('No Earnings Dataset. Quitting...')
@@ -55,7 +55,7 @@ def run():
         if symbol in summary_df.index:
             ns_earnset.append(symbol)
         else:
-            log('Symbol {} not found in Earnings Dataset'.format(symbol))
+            log('Symbol {} not found in Earnings Dataset'.format(symbol), force=True)
 
     # Symbols in price data set / load datas
     log('Checking and cleaning symbols in price dataset...', force=True)
@@ -75,10 +75,10 @@ def run():
             if dirtiness < args.dirtlimit:
                 prices_dict[symbol] = symbol_prices
             else:
-                log('Price data for {0} too dirty @ {1:.2f}%.\tskipping...'.format(symbol, dirtiness * 100))
+                log('Price data for {0} too dirty @ {1:.2f}%.\tskipping...'.format(symbol, dirtiness * 100), force=True)
 
         except FileNotFoundError:
-            log('FileNotFoundError @ {}\t\tskipping...'.format(symbol))
+            log('FileNotFoundError @ {}\t\tskipping...'.format(symbol), force=True)
 
     namespace = list(prices_dict.keys())
 
@@ -280,7 +280,7 @@ def parse_args(pargs=None):
                         help='Load a namespace from a file of specified type. Types include: '
                              'tos (Think or Swim Watchlist CSV), nl (New line seperated values), all (All in dataset')
 
-    parser.add_argument('--dirtlimit', '-dl', type=int, default=0.005,
+    parser.add_argument('--dirtlimit', '-dl', type=float, default=0.005,
                         metavar='LIMIT',
                         help='Set tolerable percent of dataset that can contain "dirty" values for OHLC and still'
                              'be considered clean (default: 0.005)')
