@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 import argparse
 
 
-def run():
+def run(pargs=None):
 
     # Get args
-    args = parse_args()
+    args = parse_args(pargs)
 
     def log(*msg, force=False):
         if args.verbose or force:
