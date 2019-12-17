@@ -72,7 +72,7 @@ def multi_df_to_excel(path: str, dfs: list, names: list = None, index=False):
     with pd.ExcelWriter(path, engine='openpyxl') as writer:
         # Write each dataframe to a different worksheet.
         for i, df in enumerate(dfs):
-            df.to_excel(writer, sheet_name='data'+str(i) if not names else names[i], index=index)
+            df.to_excel(writer, sheet_name='Sheet'+str(i+1) if not names else names[i], index=index)
 
         # Close the Pandas Excel writer and output the Excel file.
         writer.save()
