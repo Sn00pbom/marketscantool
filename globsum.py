@@ -26,10 +26,6 @@ def build(scheme, paths) -> DataFrame:
             print(path, 'incompatible. Skipping...')
             continue
 
-        except Exception as e:  # in case something else goes wrong down the line that I didn't account for
-            print('Unknown error occured. Skipping...')
-            continue
-
         rows.append(row)
 
     columns = ['path', 'simweights', 'delay', 'macd', 'anychain',
@@ -55,6 +51,7 @@ def run(pargs=None):
     paths = [join(folder_path, f) for f in listdir(folder_path) if isfile(join(folder_path, f)) and f.endswith('.xlsx')]
 
     # build (and save) DataFrame
+    print('Working...')
     df = build(scheme_module.SCHEME, paths)
     vh.data.local.multi_df_to_excel(args.output, [df], ['Global Summary'])
     print('Saved global summary to', args.output)

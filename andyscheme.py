@@ -7,6 +7,7 @@ def only_trades_df(df: DataFrame) -> DataFrame:
 
 
 def pos_dur_avg(df: DataFrame) -> float:
+    df = df[df['close@'] != 'IN POSITION']
     o = pd.to_datetime(df['open@'])
     c = pd.to_datetime(df['close@'])
     diff = c - o
