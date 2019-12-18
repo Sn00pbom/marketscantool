@@ -9,13 +9,17 @@ class ArgSchedule(object):
         with open(json_path, 'r') as f:
             self._data = json.load(f)
         self._compile()
-        self._schedule = iter(self._schedule)
+        self._feed = None
+        self.reset()
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        return next(self._schedule)
+        return next(self._feed)
+
+    def __len__(self):
+        return len(self._schedule)
 
     def _compile(self, keys=None, sequence=None):
         if sequence is None:
@@ -45,3 +49,6 @@ class ArgSchedule(object):
                         s.append(str(val))
 
                     self._compile(keys, s)
+
+    def reset(self):
+        self._feed = iter(self._schedule)
