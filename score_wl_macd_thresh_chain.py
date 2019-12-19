@@ -1,8 +1,11 @@
-from yahoo_finance_api2 import share
-from finta import TA
 import datetime
 import sys
+
+from yahoo_finance_api2 import share
+from finta import TA
+
 import valuehunter as vh
+
 
 if vh.config.DEBUG:
     PATH = './dat/small_wl.csv'
@@ -20,7 +23,7 @@ print('Ticker namespace loaded.')
 THRESH_PERCENT = .8
 print('Loading historical data from Yahoo!...')
 data_dict = vh.data.yahoo.get_namespace_historical(namespace,
-    share.PERIOD_TYPE_YEAR, 1, share.FREQUENCY_TYPE_DAY, 1)
+                                                   share.PERIOD_TYPE_YEAR, 1, share.FREQUENCY_TYPE_DAY, 1)
 print('Finished.')
 
 print('Computing MACDs...')
@@ -33,14 +36,19 @@ for ticker in data_dict:
 
 print('Compiling DataFrame and saving to file...')
 
-rubrick = vh.grade.Rubrick()
-rubrick.add_column('Threshold', lambda data_dict, ticker: vh.grade.macd.score_thresh_macd(data_dict[ticker], THRESH_PERCENT), 1.0, 35.0)
-# rubrick.add_column('Chain Len', lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker], L=2, reversal=True), 1.0, 65.0)
-rubrick.add_column('Chain Len', lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker]['HISTOGRAM'].values, L=2, reversal=True), 10.0, 65.0)
+rubrick = vh.grade.Rubric()
+rubrick.add_column('Threshold',
+                   lambda dd, t: vh.grade.macd.score_thresh_macd(dd[t], THRESH_PERCENT),
+                   1.0, 35.0)
+rubrick.add_column('Chain Len',
+                   lambda dd, t: vh.grade.macd.histogram_chain(dd[t]['HISTOGRAM'].values,
+                                                               look_back=2, reversal=True),
+                   10.0, 65.0)
 
 my_grader = vh.grade.Grader(rubrick)
 score_sheet = my_grader.grade(data_dict)
-my_grader.rubrick['Chain Len']['f'] = lambda data_dict, ticker: vh.grade.macd.histogram_chain(data_dict[ticker]['HISTOGRAM'].values, L=2, reversal=False)
+my_grader.rubric['Chain Len']['f'] = lambda dd, t: vh.grade.macd.histogram_chain(dd[t]['HISTOGRAM'].values,
+                                                                                 look_back=2, reversal=False)
 tss = my_grader.grade(data_dict)
 score_sheet['Chain Len(No Reversal)'] = tss['Chain Len']
 score_sheet['Composite Score(No Reversal)'] = tss['Composite Score']

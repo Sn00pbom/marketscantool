@@ -1,11 +1,12 @@
-from pandas import DataFrame
 
 
-def hi_thresh(dataframe, factor) -> DataFrame:
-    return dataframe.max() * factor
-    
-def lo_thresh(dataframe, factor) -> DataFrame:
-    return dataframe.min() * factor
+def hi_thresh(series, factor) -> float:
+    return series.max() * factor
+
+
+def lo_thresh(series, factor) -> float:
+    return series.min() * factor
+
 
 def value_chain(vals, istart: int) -> int:
     i1 = istart
@@ -29,7 +30,8 @@ def value_chain(vals, istart: int) -> int:
             chain += 1
         elif direction is 'down' and a <= b:
             chain -= 1
-        else: return chain
+        else:
+            return chain
 
         i1 += 1
         i2 += 1

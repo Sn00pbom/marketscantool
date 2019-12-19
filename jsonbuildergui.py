@@ -19,7 +19,6 @@ def run():
     lb = Listbox(root, selectmode=EXTENDED)
     lb.pack()
 
-
     for item in ["one", "two", "three", "four"]:
         lb.insert(END, item)
 

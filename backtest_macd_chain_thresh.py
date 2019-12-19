@@ -1,8 +1,10 @@
+import argparse
+from datetime import datetime, timedelta
+
 import backtrader as bt
+
 import valuehunter as vh
 import strategies
-from datetime import datetime, timedelta
-import argparse
 
 
 def run(pargs=None):
@@ -36,8 +38,6 @@ def run(pargs=None):
             ns_args = vh.data.think_or_swim.watchlist_to_namespace(ns_path)
         elif optype == 'nl':
             ns_args = vh.data.local.namespace_from_symbol_list(ns_path)
-        # elif optype == 'all':
-        #     ns_args = vh.data.local.namespace_from_summary(summary_df)
         else:
             print('Unrecognized type. Quitting...')
             exit()
@@ -159,9 +159,6 @@ def run(pargs=None):
         cerebro.broker.set_cash(args.equity)  # set initial equity
         cerebro.broker.setcommission(commission=0.001)  # set broker commission to .1%
 
-        # add csv writer to Cerebro
-        # cerebro.addwriter(bt.WriterFile, csv=True, out=buffer)
-
         log('\n\tBeginning Value: {}\n\tBeginning Cash: {}'.format(cerebro.broker.getvalue(), cerebro.broker.getcash()))
         try:
             results = cerebro.run(max_cpus=4)  # loop over loaded data
@@ -176,13 +173,13 @@ def run(pargs=None):
 
         # populate trade history report
         pnl_net = 0.0
-        for i, trade in enumerate(strat.trades):
+        for trade_i, trade in enumerate(strat.trades):
             pnl_trade = trade['pnl']
             pnl_net += pnl_trade
             trades_report['symbol'].append(ticker)
             trades_report['open@'].append(trade['open@'])
             trades_report['close@'].append(trade['close@'])
-            trades_report['trade #'].append(i)
+            trades_report['trade #'].append(trade_i)
             trades_report['pnl trade'].append(pnl_trade)
             trades_report['pnl net'].append(pnl_net)
 
@@ -206,7 +203,6 @@ def run(pargs=None):
         args_df = DataFrame({'Name': list(vars(args).keys()), 'Value': list(vars(args).values())})
         report_summary_df = DataFrame(summary_report)
         report_trades_df = DataFrame(trades_report)
-        # dfs = vh.data.local.outputs_to_dataframes(out_dict)
         out_path = '{}BACKTEST-{}.xlsx'.format(vh.config.SCAN_FOLDER_PATH, datetime.now().strftime('%Y-%m-%d_%H_%M'))
         vh.data.local.multi_df_to_excel(out_path, [report_summary_df, report_trades_df, args_df], ['Trade Summary',
                                                                                                    'Trade History',

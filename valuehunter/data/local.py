@@ -1,5 +1,6 @@
-from pandas import DataFrame
 import pandas as pd
+from pandas import DataFrame
+
 from valuehunter import config
 
 
@@ -17,12 +18,12 @@ def df_from_tab_delimited(path) -> DataFrame:
     return pd.read_csv(path, delimiter='\t')
 
 
-def get_price_history(ticker: str) -> DataFrame:
+def get_price_history(ticker) -> DataFrame:
     hist_path = '{}{}.csv'.format(config.SYMBOL_HISTORY_PATH, ticker)
     return pd.read_csv(hist_path, parse_dates=['date'])
 
 
-def get_ticker_earnings(ticker: str, all_earnings_df: DataFrame = None) -> DataFrame:
+def get_ticker_earnings(ticker, all_earnings_df: DataFrame = None) -> DataFrame:
     if all_earnings_df is None:
         all_earnings_df = get_all_earnings()
 
@@ -48,24 +49,7 @@ def namespace_from_summary(summary_df: DataFrame) -> list:
     return list(summary_df['symbol'].values)
 
 
-def dict_from_csv(path: str) -> dict:
-    with open(path, 'r') as f:
-        d = f.read()
-        lines = d.split('\n')
-        for i in range(len(lines)):
-            lines[i] = lines[i].split(',')
-
-        columns = lines.pop(0)
-        lines.pop()
-        data = {val: [] for val in columns}
-        for line in lines:
-            for i in range(len(columns)):
-                data[columns[i]].append(line[i])
-
-        return data
-
-
-def multi_df_to_excel(path: str, dfs: list, names: list = None, index=False):
+def multi_df_to_excel(path, dfs: list, names: list = None, index=False):
     if names and len(dfs) is not len(names):
         raise ValueError('Lists must be same size')
 
@@ -76,4 +60,3 @@ def multi_df_to_excel(path: str, dfs: list, names: list = None, index=False):
 
         # Close the Pandas Excel writer and output the Excel file.
         writer.save()
-

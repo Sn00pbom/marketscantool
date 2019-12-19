@@ -1,10 +1,12 @@
-import pandas as pd
-from pandas import DataFrame
-from os import listdir, mkdir
+from os import listdir
 from os.path import isfile, join
+import importlib.util
 import argparse
 import datetime as dt
-import importlib.util
+
+import pandas as pd
+from pandas import DataFrame
+
 import valuehunter as vh
 
 
@@ -81,4 +83,3 @@ def parse_args(pargs=None):
 
 if __name__ == '__main__':
     run()
-

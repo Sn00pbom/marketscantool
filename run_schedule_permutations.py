@@ -1,6 +1,7 @@
 import argparse
-from valuehunter import argschedule
 import subprocess
+
+from valuehunter import argschedule
 
 
 def run(pargs=None):

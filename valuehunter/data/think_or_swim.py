@@ -1,6 +1,7 @@
+from io import StringIO
+
 import pandas as pd
 from pandas import DataFrame
-from io import StringIO
 
 
 def watchlist_to_namespace(path) -> list:
@@ -11,7 +12,8 @@ def watchlist_to_namespace(path) -> list:
         out = [line.split(',')[0] for line in data]
         return out
 
-def watchlist_to_dataframe(path, index='Symbol') -> DataFrame:
+
+def watchlist_to_dataframe(path, index: str = 'Symbol') -> DataFrame:
     with open(path, 'r') as file:
         data = file.read()
         file.close()
@@ -22,12 +24,12 @@ def watchlist_to_dataframe(path, index='Symbol') -> DataFrame:
         df.set_index(index, inplace=True)
         return df
 
+
 def to_dataframe(path) -> DataFrame:
     with open(path, 'r') as file:
         data = file.read()
         data = data.split('\n')
-        data = data[3:len(data)-1]
+        data = data[3:len(data) - 1]
         s = '\n'.join(data)
         df = pd.read_csv(StringIO(s))
         return df
-
