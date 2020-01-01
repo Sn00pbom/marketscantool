@@ -1,0 +1,9 @@
+[
+  {"symbol": "AAPL", "age":  20},
+  {"symbol": "ROKU", "age": 15},
+  {"symbol": "IBM", "age": 30},
+  {"symbol": "AMD", "age": 20},
+  {"symbol": "NVDA", "age": 12},
+  {"symbol": "CSCO", "age": 45},
+  {"symbol": "AFX", "age": 18}
+]
