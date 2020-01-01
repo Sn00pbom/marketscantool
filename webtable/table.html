@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>Scan Values</title>
+  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@4.5.3/dist/css/tabulator.min.css">
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.5.3/dist/js/tabulator.min.js"></script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+  <script type="text/javascript" src="data_load.js"></script>
+ </head>
+ <body>
+
+  <h1 id="scan-values-title">Scan Values</h1>
+  <div id="input-container">
+   <select id="interval-select">
+    <option value="1">1 Min</option>
+    <option value="3">3 Min</option>
+    <option value="5">5 Min</option>
+    <option value="10">10 Min</option>
+    <option value="15">15 Min</option>
+    <option value="30">30 Min</option>
+    <option value="60">1 Hour</option>
+   </select>
+   <button id="interval-button" onclick="doTimer()">Set</button>
+   <button id="clipboard-button" onclick="selectedToClipboard()">Copy Selected Rows to Clipboard</button>
+  </div>
+  <div id="value-table"></div>
+
+  <script>
+   buildTable();
+   updateTable();
+   getCSVData();
+  </script>
+
+ </body>
+</html>
+
