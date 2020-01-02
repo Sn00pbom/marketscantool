@@ -21,5 +21,9 @@ h1 {
     font-weight: normal;
     line-height: 48px;
     margin: 0;
-    text-shadow: 0 1px 1px #525252;
+    text-shadow: 0 1px 1px #ffffff;
+}
+
+body {
+    background-color: #292929;
 }
