@@ -56,8 +56,6 @@ function uploadFile(file) {
 
   formData.append("file", file);
   fetch(url, {method: "POST", body: formData})
-      .then(() => {
-        alert('Success!');
-        initTable();})
+      .then(() => {initTable();})
       .catch(() => {alert("Failed!");})
 }
