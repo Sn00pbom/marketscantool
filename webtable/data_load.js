@@ -3,11 +3,6 @@ var timerFunc = updateTable;
 const dataPath = "data.json";
 
 function initTable() {
-    buildTable();
-    updateTable();
-}
-
-function buildTable() {
     table = new Tabulator("#value-table", {
         layout: "fitColumns",
         // autoResize: true,
@@ -57,7 +52,7 @@ function selectedToString() {
     var s = "";
     var i;
     for (i = 0; i < selectedData.length; i++) {
-        s += selectedData[i].symbol + "\n";
+        s += selectedData[i].Symbol + "\n";
     }
     return s;
 }
@@ -72,6 +67,5 @@ function doTimer() {
     window.clearInterval(timerFunc);
     updateTable();
     timerFunc = window.setInterval(updateTable, 1000 * seconds);
-
 }
 
