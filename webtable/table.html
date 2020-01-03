@@ -6,10 +6,10 @@
   <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@4.5.3/dist/css/tabulator_midnight.min.css">
   <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.5.3/dist/js/tabulator.min.js"></script>
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-  <script src="https://d3js.org/d3.v5.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
   <script type="text/javascript" src="data_load.js"></script>
+  <script type="text/javascript" src="dragndrop.js"></script>
  </head>
  <body>
 
@@ -27,12 +27,16 @@
    <a class="myButton" id="interval-button" onclick="doTimer()">Set</a>
    <a class="myButton" id="clipboard-button" onclick="selectedToClipboard()">Copy Selected Rows to Clipboard</a>
   </div>
-  <div id="value-table"></div>
+  <div id="value-table">
+   <div id="drop-area">
+    Drag Think or Swim watchlist file here.
+   </div>
+  </div>
 
   <script>
+   initDropArea();
    buildTable();
    updateTable();
-   getCSVData();
   </script>
 
  </body>

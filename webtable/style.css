@@ -28,11 +28,6 @@ body {
     background-color: #292929;
 }
 
-button {
-    background-color: black;
-    padding: 3px;
-}
-
 .myButton {
 	box-shadow: 0px 1px 0px 0px #1c1b18;
 	background:linear-gradient(to bottom, #eae0c2 5%, #ccc2a6 100%);
@@ -56,4 +51,21 @@ button {
 .myButton:active {
 	position:relative;
 	top:1px;
+}
+
+#drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 20px;
+    width: 480px;
+    font-family: sans-serif;
+    font-weight: bold;
+    margin: 100px auto;
+    padding: 60px;
+    text-align: center;
+    text-shadow: 0px 1px 0px #000000;
+    color: #ffffff;
+}
+
+#drop-area.highlight {
+  border-color: orangered;
 }

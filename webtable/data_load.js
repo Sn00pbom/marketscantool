@@ -2,8 +2,12 @@ var table;
 var timerFunc = updateTable;
 const dataPath = "data.json";
 
+function initTable() {
+    buildTable();
+    updateTable();
+}
+
 function buildTable() {
-    // d3.select("body").style("background-color", "teal");
     table = new Tabulator("#value-table", {
         layout: "fitColumns",
         // autoResize: true,
@@ -71,8 +75,3 @@ function doTimer() {
 
 }
 
-function getCSVData() {
-    var data = d3.csv("employee.csv");
-    console.log(data[1]);
-
-}
