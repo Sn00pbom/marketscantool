@@ -66,6 +66,6 @@ function doTimer() {
     var seconds = parseInt($("#interval-select :selected").val());
     window.clearInterval(timerFunc);
     updateTable();
-    timerFunc = window.setInterval(updateTable, 1000 * seconds);
+    timerFunc = window.setInterval(updateTable, 1000 * seconds * 60);
 }
 
