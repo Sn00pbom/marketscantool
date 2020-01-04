@@ -51,7 +51,7 @@ def run_with_wl_values(pargs=None):
     namespace = vh.data.think_or_swim.watchlist_to_namespace(args.path)
     print('Ticker namespace loaded.')
 
-    score_sheet = score_macd_thresh_chain(args, namespace)
+    score_sheet = score_macd_thresh_chain(namespace)
 
     wl_data = vh.data.think_or_swim.watchlist_to_dataframe(args.path)
     for col in wl_data:
