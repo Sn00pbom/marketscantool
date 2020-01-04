@@ -1,8 +1,10 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import valuehunter as vh
 from colorama import Fore
 from io import StringIO
+
 import pandas as pd
+
+import valuehunter as vh
 
 
 class ScanHandler(BaseHTTPRequestHandler):
