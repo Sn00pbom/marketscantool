@@ -23,7 +23,7 @@ def score_macd_thresh_chain(namespace):
             ticker_df[key] = macd_df[key]
         ticker_df['HISTOGRAM'] = macd_df['MACD'] - macd_df['SIGNAL']
 
-    print('Compiling DataFrame and saving to file...')
+    print('Compiling DataFrame...')
 
     rubrick = vh.grade.Rubric()
     rubrick.add_column('Threshold',
@@ -73,6 +73,7 @@ def parse_args(pargs=None):
 if __name__ == '__main__':
     # TODO move format string to config
     score_sheet = run_with_wl_values()
+    print('Saving to file...')
     path = vh.config.SCAN_FOLDER_PATH + 'SCAN-' + datetime.datetime.now().strftime('%Y-%m-%d_%H_%M') + '.csv'
     score_sheet.to_csv(path)
     print('Saved to', path)
