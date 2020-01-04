@@ -4,19 +4,19 @@ from io import StringIO
 
 import pandas as pd
 
-import valuehunter as vh
+from score_wl_macd_thresh_chain import score_macd_thresh_chain
 
 
 class ScanHandler(BaseHTTPRequestHandler):
     scan_func = None
-    name_space = []
+    namespace = []
 
     def do_POST(self):
         """Serve POST Request"""
         datalen = int(self.headers['Content-Length'])
         wl_io = StringIO(self.rfile.read(datalen).decode('utf-8'))
         tos_wl_df = pd.read_csv(wl_io, header=5).iloc[0:-1]
-        ScanHandler.name_space = [v for v in tos_wl_df['Symbol']]
+        ScanHandler.namespace = [v for v in tos_wl_df['Symbol']]
         self.send_response(200)
         self.end_headers()
 
@@ -78,15 +78,13 @@ def start_server(scan_function):
         server.socket.close()
 
 
-def scan_macd(): # TODO use score wl macd thresh chain
-    data_dict = {}
-    for ticker in ScanHandler.name_space:
-        data_dict[ticker] = vh.data.local.get_price_history(ticker)
-    rubric = vh.grade.Rubric()
-    rubric.add_column('MACD CL', lambda dd, t: vh.grade.macd.histogram_chain())
+def score_table_func(namespace):
+    df = score_macd_thresh_chain(namespace)
+    df = df.reset_index()
+    df = df.rename(columns={'index': 'Symbol'})
+    return df
 
 
 if __name__ == '__main__':
-    # data_func = lambda: vh.data.local.get_price_history('ROKU')
-    data_func = lambda: pd.DataFrame([[v] for v in ScanHandler.name_space], columns=['Symbol'])
+    data_func = lambda: score_table_func(ScanHandler.namespace)
     start_server(data_func)
