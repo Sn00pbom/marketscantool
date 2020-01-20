@@ -42,6 +42,10 @@ def get_historical_data(ticker, period_type, period, frequency_type, frequency, 
         print('Data not standard @ Ticker', ticker, '\t...skipping')
         return DataFrame()  # Return empty DataFrame instead of None
 
+    except:
+        print('unknown error', '@ Ticker', ticker)
+        return DataFrame()  # Return empty DataFrame instead of None
+
 
 def get_namespace_historical(namespace, period_type, period, frequency_type, frequency) -> dict:
     data_dict = {}

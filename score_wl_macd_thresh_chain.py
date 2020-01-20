@@ -63,7 +63,7 @@ def run_with_wl_values(pargs=None):
 def parse_args(pargs=None):
     parser = argparse.ArgumentParser(description='Get a score sheet of a set of tickers in a Think or Swim watch list.')
 
-    parser.add_argument('path', nargs=1,
+    parser.add_argument('path',
                         metavar='PATH',
                         help='path to think or swim watchlist file.')
 
