@@ -5,7 +5,7 @@ import backtrader as bt
 import valuehunter as vh
 
 
-class NuStrat():
+class NuStrat(bt.Strategy):
     params = (
             ('stop_percent', None),
             ('limit_percent', None),
@@ -13,34 +13,51 @@ class NuStrat():
             )
 
     def __init__(self):
-        self.data_close = self.datas[0].close
-        self.macd_histo = bt.indicators.MACDHisto(self.datas[0],
+        macd = bt.indicators.MACDHisto(self.datas[0],
                 period_me1=self.p.macd_periods[0],
                 period_me2=self.p.macd_periods[1],
                 period_signal=self.p.macd_periods[2])
+        self.macd_crossup = bt.ind.CrossUp(macd.macd, macd.signal)
+        self.macd_crossdown = bt.ind.CrossUp(macd.signal, macd.macd)
 
         # Track orders
         self.sl_order = None  # stop loss order
         self.lim_order = None  # limit order
         self.tp_order = None  # take profit order
 
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
-            return
-
     def next_open(self):
         if not self.position:
-            if self.macd_histo[0] > 0 and self.macd_histo[-1] < 0:
-                self.tp_order = self.sell()
-                self.sl_order = self.buy(exectype=bt.Order.Stop,
-
-                        parent=self.tp_order)
-                self.lim_order = self.buy(price=self.sim[0] * (1.0 - self.p.limit_percent),
+            price = self.data.close[0]
+            if self.macd_crossdown:
+                # Bearish
+                self.tp_order = self.sell(transmit=False)
+                self.sl_order = self.buy(
+                        transmit=False,
+                        parent=self.tp_order,
+                        exectype=bt.Order.Stop,
+                        price=price * (1.0 + self.p.stop_percent),
+                        )
+                self.lim_order = self.buy(
+                        transmit=True,
+                        parent=self.tp_order,
                         exectype=bt.Order.Limit,
-                        transmit=True, parent=self.tp_order)
-            elif self.macd_histo[0] < 0 and self.macd_histo[-1] > 0:
-                cross = 'short'
+                        price=price * (1.0 - self.p.limit_percent),
+                        )
+            elif self.macd_crossup:
+                # Bullish
+                self.tp_order = self.buy(transmit=False)
+                self.sl_order = self.sell(
+                        transmit=False,
+                        parent=self.tp_order,
+                        exectype=bt.Order.Stop,
+                        price=price * (1.0 - self.p.stop_percent),
+                        )
+                self.lim_order = self.sell(
+                        transmit=True,
+                        parent=self.tp_order,
+                        exectype=bt.Order.Limit,
+                        price=price * (1.0 + self.p.limit_percent),
+                        )
 
         else:
             # Just wait for stop/limit
@@ -52,11 +69,13 @@ if __name__ == "__main__":
         print('USAGE: nustrat.py [STOP %] [LIMIT %]')
         exit(1)
 
-    PATH = "~/Downloads/NQ=F.csv"
-    STAKE = 100
+    PATH = "/home/zach/Downloads/NQF.csv"
+    STAKE = 1
     EQUITY = 100000
     COMMISSION = 0.001
     _, stop_percent, limit_percent = argv
+    stop_percent = float(stop_percent)
+    limit_percent = float(limit_percent)
 
     cerebro = bt.Cerebro(cheat_on_open=True)
     cerebro.addstrategy(NuStrat, stop_percent=stop_percent, limit_percent=limit_percent)
@@ -65,4 +84,7 @@ if __name__ == "__main__":
     cerebro.addsizer(bt.sizers.FixedSize, stake=STAKE)  # set fixed sizer
     cerebro.broker.set_cash(EQUITY)  # set initial equity
     cerebro.broker.setcommission(commission=COMMISSION)  # set broker commission to .1%
+
+    cerebro.run(max_cpus=4)
+    cerebro.plot()
 
