@@ -1,4 +1,5 @@
 from sys import argv
+from datetime import datetime
 
 import backtrader as bt
 
@@ -85,6 +86,8 @@ if __name__ == "__main__":
     cerebro.addsizer(bt.sizers.FixedSize, stake=STAKE)  # set fixed sizer
     cerebro.broker.set_cash(EQUITY)  # set initial equity
     cerebro.broker.setcommission(commission=COMMISSION)  # set broker commission to .1%
+
+    cerebro.addwriter(bt.WriterFile, csv=True, out='summary_{}.csv'.format(datetime.now().strftime('%H%M%S')))
 
     cerebro.run(max_cpus=4)
     cerebro.plot()
