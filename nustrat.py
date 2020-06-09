@@ -3,6 +3,7 @@ from sys import argv
 import backtrader as bt
 
 import valuehunter as vh
+import feedadapters
 
 
 class NuStrat(bt.Strategy):
@@ -65,21 +66,21 @@ class NuStrat(bt.Strategy):
 
 
 if __name__ == "__main__":
-    if len(argv) != 3:
-        print('USAGE: nustrat.py [STOP %] [LIMIT %]')
+    if len(argv) != 4:
+        print('USAGE: nustrat.py [STOP %] [LIMIT %] [PATH]')
         exit(1)
 
-    PATH = "/home/zach/Downloads/NQF.csv"
     STAKE = 1
     EQUITY = 100000
     COMMISSION = 0.001
-    _, stop_percent, limit_percent = argv
+    _, stop_percent, limit_percent, PATH = argv
     stop_percent = float(stop_percent)
     limit_percent = float(limit_percent)
 
     cerebro = bt.Cerebro(cheat_on_open=True)
     cerebro.addstrategy(NuStrat, stop_percent=stop_percent, limit_percent=limit_percent)
-    data_feed = bt.feeds.YahooFinanceCSVData(dataname=PATH)
+    # data_feed = bt.feeds.YahooFinanceCSVData(dataname=PATH)
+    data_feed = feedadapters.BarchartCSVData(dataname=PATH)
     cerebro.adddata(data_feed)
     cerebro.addsizer(bt.sizers.FixedSize, stake=STAKE)  # set fixed sizer
     cerebro.broker.set_cash(EQUITY)  # set initial equity
