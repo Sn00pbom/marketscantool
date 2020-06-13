@@ -21,46 +21,28 @@ class NuStrat(bt.Strategy):
                 period_signal=self.p.macd_periods[2])
         self.macd_crossup = bt.ind.CrossUp(macd.macd, macd.signal)
         self.macd_crossdown = bt.ind.CrossUp(macd.signal, macd.macd)
+        print('datetime', 'isbuy', 'issell', 'price', 'pnl', sep=',')
 
-        # Track orders
-        self.sl_order = None  # stop loss order
-        self.lim_order = None  # limit order
-        self.tp_order = None  # take profit order
+    def notify_order(self, order):
+        if order.status == order.Completed:
+            print(datetime.fromtimestamp(order.executed.dt), order.isbuy(), order.issell(), order.executed.price, order.executed.pnl, sep=',')
 
-    def next_open(self):
+
+    def next(self):
         if not self.position:
-            price = self.data.close[0]
+            close = self.data.close[0]
             if self.macd_crossdown:
                 # Bearish
-                self.tp_order = self.sell(transmit=False)
-                self.sl_order = self.buy(
-                        transmit=False,
-                        parent=self.tp_order,
-                        exectype=bt.Order.Stop,
-                        price=price * (1.0 + self.p.stop_percent),
-                        )
-                self.lim_order = self.buy(
-                        transmit=True,
-                        parent=self.tp_order,
-                        exectype=bt.Order.Limit,
-                        price=price * (1.0 - self.p.limit_percent),
+                orders = self.sell_bracket(
+                        limitprice=close*(1.0 - self.p.limit_percent),
+                        stopprice=close*(1.0 + self.p.stop_percent),
                         )
             elif self.macd_crossup:
                 # Bullish
-                self.tp_order = self.buy(transmit=False)
-                self.sl_order = self.sell(
-                        transmit=False,
-                        parent=self.tp_order,
-                        exectype=bt.Order.Stop,
-                        price=price * (1.0 - self.p.stop_percent),
+                orders = self.buy_bracket(
+                        limitprice=close*(1.0 + self.p.limit_percent),
+                        stopprice=close*(1.0 - self.p.stop_percent),
                         )
-                self.lim_order = self.sell(
-                        transmit=True,
-                        parent=self.tp_order,
-                        exectype=bt.Order.Limit,
-                        price=price * (1.0 + self.p.limit_percent),
-                        )
-
         else:
             # Just wait for stop/limit
             pass
@@ -78,17 +60,16 @@ if __name__ == "__main__":
     stop_percent = float(stop_percent)
     limit_percent = float(limit_percent)
 
-    cerebro = bt.Cerebro(cheat_on_open=True)
+    cerebro = bt.Cerebro()
     cerebro.addstrategy(NuStrat, stop_percent=stop_percent, limit_percent=limit_percent)
     # data_feed = bt.feeds.YahooFinanceCSVData(dataname=PATH)
     data_feed = feedadapters.BarchartCSVData(dataname=PATH)
     cerebro.adddata(data_feed)
     cerebro.addsizer(bt.sizers.FixedSize, stake=STAKE)  # set fixed sizer
     cerebro.broker.set_cash(EQUITY)  # set initial equity
-    cerebro.broker.setcommission(commission=COMMISSION)  # set broker commission to .1%
+    cerebro.broker.setcommission(commission=COMMISSION)  # set broker commission
 
-    cerebro.addwriter(bt.WriterFile, csv=True, out='summary_{}.csv'.format(datetime.now().strftime('%H%M%S')))
-
+    # cerebro.addwriter(bt.WriterFile, csv=True, out='summary_{}.csv'.format(datetime.now().strftime('%H%M%S')))
     cerebro.run(max_cpus=4)
     cerebro.plot()
 
