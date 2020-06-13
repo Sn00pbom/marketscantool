@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     STAKE = 1
     EQUITY = 100000
-    COMMISSION = 0.001
+    COMMISSION = 0.000
     _, stop_percent, limit_percent, PATH = argv
     stop_percent = float(stop_percent)
     limit_percent = float(limit_percent)
