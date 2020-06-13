@@ -5,6 +5,7 @@ import backtrader as bt
 
 import valuehunter as vh
 import feedadapters
+import analyzers
 
 
 class NuStrat(bt.Strategy):
@@ -21,12 +22,6 @@ class NuStrat(bt.Strategy):
                 period_signal=self.p.macd_periods[2])
         self.macd_crossup = bt.ind.CrossUp(macd.macd, macd.signal)
         self.macd_crossdown = bt.ind.CrossUp(macd.signal, macd.macd)
-        print('datetime', 'isbuy', 'issell', 'price', 'pnl', sep=',')
-
-    def notify_order(self, order):
-        if order.status == order.Completed:
-            print(datetime.fromtimestamp(order.executed.dt), order.isbuy(), order.issell(), order.executed.price, order.executed.pnl, sep=',')
-
 
     def next(self):
         if not self.position:
@@ -69,7 +64,10 @@ if __name__ == "__main__":
     cerebro.broker.set_cash(EQUITY)  # set initial equity
     cerebro.broker.setcommission(commission=COMMISSION)  # set broker commission
 
-    # cerebro.addwriter(bt.WriterFile, csv=True, out='summary_{}.csv'.format(datetime.now().strftime('%H%M%S')))
-    cerebro.run(max_cpus=4)
+    cerebro.addanalyzer(analyzers.AdjacentPositionSummary, _name='aps')
+    results = cerebro.run(max_cpus=4)
     cerebro.plot()
 
+    out_path = 'summary_{}.csv'.format(datetime.now().strftime('%H%M%S'))
+    with open(out_path, 'w') as f:
+        f.write(results[0].analyzers.aps.get_analysis())
