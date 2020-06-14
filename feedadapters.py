@@ -6,7 +6,7 @@ import backtrader as bt
 
 class BarchartCSVData(bt.feeds.GenericCSVData):
     params = (
-            ('dtformat', ('%Y-%m-%dT%H:%M:%S-05:00')),
+            ('dtformat', ('%Y-%m-%dT%H:%M:%S')),
             ('datetime', 1),
             ('open', 3),
             ('high', 4),
@@ -17,7 +17,8 @@ class BarchartCSVData(bt.feeds.GenericCSVData):
 
     def _loadline(self, tokens):
         tokens = [token.replace('"', '') for token in tokens]
-        dt = datetime.strptime(tokens[self.p.datetime],
+        dtstr = tokens[self.p.datetime][0:-6]
+        dt = datetime.strptime(dtstr,
                 self.p.dtformat)
         self.lines.datetime[0] = self.date2num(dt)
         self.lines.open[0] = float(tokens[self.p.open])
