@@ -6,7 +6,7 @@ from backtrader import Analyzer
 
 class AdjacentPositionSummary(Analyzer):
     params = (
-            ('headers', ['isbuy', 'issell', 'price', 'pnl', 'tot pnl']),
+            ('headers', ['datetime', 'isbuy', 'issell', 'price', 'pnl', 'tot pnl']),
             )
 
     def __init__(self):
@@ -19,7 +19,7 @@ class AdjacentPositionSummary(Analyzer):
         if order.status == order.Completed:
             # print(dt.fromtimestamp(order.executed.dt), order.isbuy(), order.issell(), order.executed.price, sep=',', file=self._o)
             self._tot_pnl += order.executed.pnl
-            print(order.isbuy(), order.issell(), order.executed.price, order.executed.pnl, self._tot_pnl, sep=',', file=self._o)
+            print(self.data.num2date(order.executed.dt), order.isbuy(), order.issell(), order.executed.price, order.executed.pnl, self._tot_pnl, sep=',', file=self._o)
 
     def get_analysis(self):
         return self._o.getvalue()
