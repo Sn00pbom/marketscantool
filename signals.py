@@ -62,13 +62,36 @@ class Earnings(bt.Indicator):
         today_earnings = str(self.data.datetime.date()) in self.earnings
         self.lines.has_earnings[0] = today_earnings
 
+class Threshold(bt.Indicator):
+    lines = ('hi_thresh', 'lo_thresh', 'hi_exceed', 'lo_exceed', 'indicator',)
+    params = (
+        ('trigger_percent', .8),
+        ('mem_max', 50), # max number of periods held in threshold memory (-1 for no maximum)
+        ('indicator', None),
+    )
 
-class MACDThresholdPercent(bt.Indicator):
-    lines = ('hi_thresh', 'lo_thresh', 'hi_exceed', 'lo_exceed')
+    def __init__(self):
+        self.lines.indicator = self.p.indicator
+        self.mem = list()
+
+    def next(self):
+        self.mem.append(self.lines.indicator[0])
+        if self.p.mem_max >= 0 and len(self.mem) > self.p.mem_max:
+            self.mem.pop(0)
+
+        # compute hi signals
+        hi_thresh_i = max(self.mem)
+        self.lines.hi_thresh[0] = hi_thresh_i
+        self.lines.hi_exceed[0] = (self.indicator[0]/hi_thresh_i if hi_thresh_i else self.p.trigger_percent+1) > self.p.trigger_percent
+        
+        # compute lo signals
+        lo_thresh_i = min(self.mem)
+        self.lines.lo_thresh[0] = lo_thresh_i
+        self.lines.lo_exceed[0] = (self.indicator[0]/lo_thresh_i if lo_thresh_i else self.p.trigger_percent+1) > self.p.trigger_percent
+
+class MACDThresholdPercent(Threshold):
     params = (
         ('macd_periods', [12, 26, 9]),
-        ('max_percent', .8),
-        ('trigger_percent', .8),
     )
 
     def __init__(self):
@@ -77,23 +100,5 @@ class MACDThresholdPercent(bt.Indicator):
             period_me2=self.p.macd_periods[1],
             period_signal=self.p.macd_periods[2],
         )
-        self.macd = macd.macd
-
-        self.vals = []
-
-    def next(self):
-        self.vals.append(self.macd[0])
-
-        # compute hi signals
-        hi_thresh_i = max(self.vals) * self.p.max_percent
-        self.lines.hi_thresh[0] = hi_thresh_i
-        self.lines.hi_exceed[0] = (self.macd[0]/hi_thresh_i if hi_thresh_i else self.p.trigger_percent+1) > self.p.trigger_percent
-
-        # compute lo signals
-        lo_thresh_i = min(self.vals) * self.p.max_percent
-        self.lines.lo_thresh[0] = lo_thresh_i
-        self.lines.lo_exceed[0] = (self.macd[0]/lo_thresh_i if lo_thresh_i else self.p.trigger_percent+1) > self.p.trigger_percent
-
-
-
-
+        self.p.indicator = macd.macd
+        super().__init__()

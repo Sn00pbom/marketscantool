@@ -6,6 +6,8 @@ import backtrader as bt
 import valuehunter as vh
 import feedadapters
 import analyzers
+from signals import MACDThresholdPercent
+from signals import Threshold
 
 
 class NuStrat(bt.Strategy):
@@ -22,17 +24,22 @@ class NuStrat(bt.Strategy):
                 period_signal=self.p.macd_periods[2])
         self.macd_crossup = bt.ind.CrossUp(macd.macd, macd.signal)
         self.macd_crossdown = bt.ind.CrossUp(macd.signal, macd.macd)
+        self.thresh = Threshold(
+                indicator=macd.macd,
+                trigger_percent=.5,
+                mem_max=-1
+                )
 
     def next(self):
         if not self.position:
             close = self.data.close[0]
-            if self.macd_crossdown:
+            if self.macd_crossdown and self.thresh.hi_exceed:
                 # Bearish
                 orders = self.sell_bracket(
                         limitprice=close*(1.0 - self.p.limit_percent),
                         stopprice=close*(1.0 + self.p.stop_percent),
                         )
-            elif self.macd_crossup:
+            elif self.macd_crossup and self.thresh.lo_exceed:
                 # Bullish
                 orders = self.buy_bracket(
                         limitprice=close*(1.0 + self.p.limit_percent),
